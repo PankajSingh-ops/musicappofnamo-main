@@ -1,0 +1,28 @@
+{
+    "playlists": [
+      {
+        "id": 1,
+        "title": "Chill Vibes",
+        "creator": "User",
+        "trackCount": 15,
+        "image": "https://example.com/chill-vibes.jpg",
+        "description": "Relaxing tracks for a calm evening"
+      },
+      {
+        "id": 2,
+        "title": "Workout Mix",
+        "creator": "User",
+        "trackCount": 20,
+        "image": "https://example.com/workout-mix.jpg",
+        "description": "High-energy tracks to keep you motivated"
+      },
+      {
+        "id": 3,
+        "title": "Road Trip Classics",
+        "creator": "User",
+        "trackCount": 25,
+        "image": "https://example.com/road-trip.jpg",
+        "description": "Perfect playlist for long drives"
+      }
+    ]
+  }

@@ -1,0 +1,28 @@
+{
+    "recentlyPlayed": [
+        {
+            "id": 1,
+            "title": "Billie Eilish", 
+            "image": "https://cdn.britannica.com/13/222713-050-ECDEDACE/Taylor-Swift-2019-Jingle-Ball.jpg"
+        },
+        {
+            "id": 2,
+            "title": "The Weeknd", 
+            "image": "https://cdn.britannica.com/13/222713-050-ECDEDACE/Taylor-Swift-2019-Jingle-Ball.jpg"
+        }
+    ],
+    "suggestions": [
+        {
+            "id": 1,
+            "title": "Top 50 Global", 
+            "description": "Most played tracks right now", 
+            "image": "https://cdn.britannica.com/13/222713-050-ECDEDACE/Taylor-Swift-2019-Jingle-Ball.jpg"
+        },
+        {
+            "id": 2,
+            "title": "Ed Sheeran Mix", 
+            "description": "Your favorite Ed Sheeran songs", 
+            "image": "https://cdn.britannica.com/13/222713-050-ECDEDACE/Taylor-Swift-2019-Jingle-Ball.jpg"
+        }
+    ]
+}
