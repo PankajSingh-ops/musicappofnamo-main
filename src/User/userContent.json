@@ -9,7 +9,18 @@
             "id": 2,
             "title": "The Weeknd", 
             "image": "https://cdn.britannica.com/13/222713-050-ECDEDACE/Taylor-Swift-2019-Jingle-Ball.jpg"
+        },
+        {
+            "id": 3,
+            "title": "Billie Eilish", 
+            "image": "https://cdn.britannica.com/13/222713-050-ECDEDACE/Taylor-Swift-2019-Jingle-Ball.jpg"
+        },
+        {
+            "id": 4,
+            "title": "The Weeknd", 
+            "image": "https://cdn.britannica.com/13/222713-050-ECDEDACE/Taylor-Swift-2019-Jingle-Ball.jpg"
         }
+
     ],
     "suggestions": [
         {

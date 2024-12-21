@@ -23,16 +23,41 @@ export const setupPlayer = async () => {
 export const tracks = [
   {
     id: '1',
-    url: require('../../audio/audio.mp3'),
+    url: require('../../audio/hindi.mp3'),
     title: 'Track 1',
     artist: 'Artist 1',
-    duration: 180,
+    duration: 800,
+    artwork: undefined // optional: add artwork if you have it
   },
   {
     id: '2',
-    url: require('../../audio/music.mp3'),
+    url: require('../../audio/gaana.mp3'),
     title: 'Track 2',
     artist: 'Artist 2',
-    duration: 240,
+    duration: 800,
+    artwork: undefined
+  },
+  {
+    id: '3',
+    url: require('../../audio/kk.mp3'),
+    title: 'Track 3',
+    artist: 'Artist 4',
+    duration: 800,
+    artwork: undefined
   },
 ];
+
+// Add this function to test loading tracks
+export const addTracks = async () => {
+  try {
+    await TrackPlayer.add(tracks);
+    console.log('Tracks added successfully');
+  } catch (error) {
+    console.log('Error adding tracks:', error);
+    // Log the full path to help debug
+    console.log('Track paths:', {
+      track1: require('../../audio/hindi.mp3'),
+      track2: require('../../audio/music.mp3')
+    });
+  }
+};

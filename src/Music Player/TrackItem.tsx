@@ -26,7 +26,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ item, onPlay, isEditing, onRemove
       onPressOut={() => setIsHovered(false)}
       onPress={() => onPlay(item)}>
       <View style={styles.imageContainer}>
-        <Image source={{ uri: item.image }} style={styles.trackImage} />
+        <Image source={{ uri: item.artwork }} style={styles.trackImage} />
         {isHovered && (
           <View style={styles.playOverlay}>
             <Icon name="play-circle" size={40} color="#1DB954" />

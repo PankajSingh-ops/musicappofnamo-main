@@ -2,7 +2,7 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import SplashScreen from './src/common/SplashScreen';
-import MusicPlayer from './src/screen/MusicPlayer'; // Renamed from previous App component
+import MusicPlayer from './src/screen/MusicPlayer';
 import {RootStackParamList} from './type';
 import HomeScreen from './src/Home/HomeScreen';
 import AuthScreen from './src/auth/AuthMainPage';
@@ -13,6 +13,11 @@ import ForgetPasswordScreen from './src/auth/ForgetPassword';
 import VerifyOTPScreen from './src/auth/VerifyOTP';
 import ResetPasswordScreen from './src/auth/ResetPassword';
 import UserHomeScreen from './src/User/UserScreenPage';
+import Genre from './src/User/Settings/Genre';
+import GenreDetails from './src/User/Settings/GenreDetails';
+import {NewMusic, TopMusic} from './src/User/Settings/NewAndTopMusic';
+import {ArtistDetailPage, ArtistMainPage} from './src/Artist/ArtistMainPage';
+import UserProfile from './src/User/UserProfile';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -36,7 +41,13 @@ const App = () => {
           <Stack.Screen name="VerifyOTP" component={VerifyOTPScreen} />
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           <Stack.Screen name="Userhome" component={UserHomeScreen} />
-
+          <Stack.Screen name="Genre" component={Genre} />
+          <Stack.Screen name="GenreDetails" component={GenreDetails} />
+          <Stack.Screen name="NewReleases" component={NewMusic} />
+          <Stack.Screen name="TopMusic" component={TopMusic} />
+          <Stack.Screen name="ArtistMain" component={ArtistMainPage} />
+          <Stack.Screen name="ArtistDetail" component={ArtistDetailPage} />
+          <Stack.Screen name="UserProfile" component={UserProfile} />
         </Stack.Navigator>
       </NavigationContainer>
     </AuthProvider>

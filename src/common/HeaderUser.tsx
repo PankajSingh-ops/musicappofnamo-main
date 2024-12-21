@@ -38,7 +38,7 @@ const Header = () => {
     await logout();
     navigation.reset({
       index: 0,
-      routes: [{name: 'auth'}],
+      routes: [{name: 'Auth'}],
     });
   };
 
@@ -55,7 +55,7 @@ const Header = () => {
           placeholderTextColor="#888"
         />
 
-        <TouchableOpacity onPress={() => navigation.navigate('UserDetails')}>
+        <TouchableOpacity onPress={() => navigation.navigate('UserProfile')}>
           <Icon name="user" size={30} color="white" />
         </TouchableOpacity>
       </View>
@@ -79,7 +79,7 @@ const Header = () => {
             <View style={styles.drawerOptions}>
               <TouchableOpacity
                 style={styles.drawerOption}
-                onPress={() => navigation.navigate('NewMusic')}>
+                onPress={() => navigation.navigate('NewReleases')}>
                 <Icon
                   name="music"
                   size={20}
@@ -103,7 +103,7 @@ const Header = () => {
 
               <TouchableOpacity
                 style={styles.drawerOption}
-                onPress={() => navigation.navigate('Artists')}>
+                onPress={() => navigation.navigate('ArtistMain')}>
                 <Icon
                   name="microphone"
                   size={20}

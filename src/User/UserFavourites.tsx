@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,42 +7,110 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import TrackPlayer, { useTrackPlayerEvents, Event, State } from 'react-native-track-player';
 import GlobalPlayer from '../Music Player/GlobalPlayer';
 import TrackItem from '../Music Player/TrackItem';
 import { favoritesData } from './data/demofavouriteData';
 import { Track } from '../../type';
+import { setupPlayer } from '../components/TrackPlayer';
 
 const FavoritesScreen: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
-  const handlePlayTrack = (track: Track) => {
-    setCurrentTrack(track);
-    setIsPlaying(true);
+  useEffect(() => {
+    const initializePlayer = async () => {
+      try {
+        await setupPlayer();
+        await TrackPlayer.reset();
+        const tracks = favoritesData.map(track => ({
+          id: track.id,
+          url: track.url,
+          title: track.title,
+          artist: track.artist,
+          artwork: track.artwork,
+        }));
+        await TrackPlayer.add(tracks);
+      } catch (error) {
+        console.error('Error initializing player:', error);
+      }
+    };
+
+    initializePlayer();
+  }, []);
+
+  useTrackPlayerEvents([Event.PlaybackState], async (event) => {
+    if (event.type === Event.PlaybackState) {
+      const state = await TrackPlayer.getState();
+      setIsPlaying(state === State.Playing);
+    }
+  });
+
+  const handlePlayTrack = async (track: Track) => {
+    try {
+      const index = favoritesData.findIndex(t => t.id === track.id);
+      await TrackPlayer.skip(index);
+      setCurrentTrack(track);
+      await TrackPlayer.play();
+      setIsPlaying(true);
+    } catch (error) {
+      console.error('Error playing track:', error);
+    }
   };
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
+  const handlePlayPause = async () => {
+    try {
+      if (isPlaying) {
+        await TrackPlayer.pause();
+      } else {
+        await TrackPlayer.play();
+      }
+      setIsPlaying(!isPlaying);
+    } catch (error) {
+      console.error('Error toggling play/pause:', error);
+    }
   };
 
-  const handleRemoveTrack = (trackId: string) => {
-    // Implement remove functionality
-    console.log('Remove track:', trackId);
+  const handleNext = async () => {
+    try {
+      await TrackPlayer.skipToNext();
+      const trackIndex = await TrackPlayer.getCurrentTrack();
+      if (trackIndex !== null) {
+        setCurrentTrack(favoritesData[trackIndex]);
+      }
+    } catch (error) {
+      console.error('Error skipping to next track:', error);
+    }
   };
 
-  const handleNext = () => {
-    // Implement next track logic
-    console.log('Next track');
+  const handlePrevious = async () => {
+    try {
+      await TrackPlayer.skipToPrevious();
+      const trackIndex = await TrackPlayer.getCurrentTrack();
+      if (trackIndex !== null) {
+        setCurrentTrack(favoritesData[trackIndex]);
+      }
+    } catch (error) {
+      console.error('Error skipping to previous track:', error);
+    }
   };
 
-  const handlePrevious = () => {
-    // Implement previous track logic
-    console.log('Previous track');
+  const handleRemoveTrack = async (trackId: string) => {
+    try {
+      const index = favoritesData.findIndex(track => track.id === trackId);
+      if (index !== -1) {
+        await TrackPlayer.remove(index);
+        // Here you would typically also update your favoritesData state
+        console.log('Track removed:', trackId);
+      }
+    } catch (error) {
+      console.error('Error removing track:', error);
+    }
   };
 
   const handleToggleFavorite = () => {
-    // Implement toggle favorite logic
+    // Implement your favorite toggling logic here
     console.log('Toggle favorite');
   };
 
