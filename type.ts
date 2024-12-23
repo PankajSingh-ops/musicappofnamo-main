@@ -65,7 +65,6 @@ export interface UserType {
   id: string;
   name: string;
   username: string;
-  imageUrl: string;
   followers: number;
   following: number;
   bio: string;
@@ -74,4 +73,5 @@ export interface UserType {
   phoneNumber: string;
   country: string;
   subscriptionType: 'free' | 'premium';
+  imageUrl: string | null; // Add this property
 }

@@ -4,7 +4,7 @@ export const userData: UserType = {
     id: 'user123',
     name: 'John Anderson',
     username: 'john_music',
-    imageUrl: 'https://example.com/profile-image.jpg',
+    imageUrl: 'https://www.shutterstock.com/image-photo/full-body-profile-photo-crazy-260nw-1559830004.jpg',
     followers: 1234,
     following: 567,
     bio: 'Music enthusiast | Playlist curator',
