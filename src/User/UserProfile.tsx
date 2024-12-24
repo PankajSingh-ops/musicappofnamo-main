@@ -1,9 +1,8 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
   Image,
-  StyleSheet,
   ScrollView,
   Platform,
   TouchableOpacity,
@@ -12,6 +11,7 @@ import {
   FlatList,
   Alert,
   PermissionsAndroid,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import * as ImagePicker from 'react-native-image-picker';
@@ -19,12 +19,18 @@ import {Picker} from '@react-native-picker/picker';
 import {countries} from '../../data/countries/Countries';
 import {UserType} from '../../type';
 import {userData} from './UserProfileData';
+import {useAuth} from '../../asyncStorage/AsyncStorage';
+import {profileService, ProfileUpdateData} from '../API/Profile/UserprofileApi';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import styles from './CSS/Userprofile';
+
+const DEFAULT_PROFILE_IMAGE = require('../../assests/logo/logo.png');
 
 interface EditableField {
   label: string;
   key: keyof UserType;
   editable: boolean;
-  type?: 'text' | 'gender' | 'country' | 'image' | 'multiline';
+  type?: 'text' | 'gender' | 'country' | 'image' | 'multiline' | 'date';
 }
 
 const genderOptions = [
@@ -34,21 +40,51 @@ const genderOptions = [
 ];
 
 const UserProfile: React.FC = () => {
+  const {logout} = useAuth();
   const [user, setUser] = useState<UserType>(userData);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editingField, setEditingField] = useState<keyof UserType | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      const profileData = await profileService.fetchProfile();
+      setUser(profileData);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Unauthorized')) {
+        await logout();
+      } else {
+        Alert.alert('Error', 'Failed to load profile');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const editableFields: EditableField[] = [
-    {label: 'Name', key: 'name', editable: true, type: 'text'},
-    {label: 'Username', key: 'username', editable: false, type: 'text'},
+    {label: 'Name', key: 'full_name', editable: false, type: 'text'},
+    {label: 'Email', key: 'email', editable: false, type: 'text'},
     {label: 'Bio', key: 'bio', editable: true, type: 'multiline'},
-    {label: 'Phone Number', key: 'phoneNumber', editable: true, type: 'text'},
+    {label: 'Phone Number', key: 'phone_number', editable: true, type: 'text'},
     {label: 'Country', key: 'country', editable: true, type: 'country'},
     {label: 'Gender', key: 'gender', editable: true, type: 'gender'},
-    {label: 'Date of Birth', key: 'dateOfBirth', editable: true, type: 'text'},
+    {
+      label: 'Date of Birth',
+      key: 'date_of_birth',
+      editable: true,
+      type: 'date',
+    },
     {
       label: 'Subscription',
       key: 'subscriptionType',
@@ -116,58 +152,139 @@ const UserProfile: React.FC = () => {
     };
 
     try {
+      setIsSaving(true);
       const response = await ImagePicker.launchImageLibrary(options);
 
       if (response.didCancel || response.errorCode) {
         return;
       }
 
-      // Ensure we update with either the new URI or null
-      setUser(prev => ({
-        ...prev,
-        imageUrl: response.assets?.[0]?.uri ?? null,
-      }));
+      const imageUrl = response.assets?.[0]?.uri;
+      if (imageUrl) {
+        await profileService.updateProfile({imageUrl});
+        setUser(prev => ({
+          ...prev,
+          imageUrl,
+        }));
+      }
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert('Error', 'Failed to update profile picture');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleEdit = (field: keyof UserType) => {
     setEditingField(field);
-    setEditValue(user[field] as string);
-    setIsEditing(true);
+    if (field === 'date_of_birth') {
+      const date = user[field] ? new Date(user[field] as string) : new Date();
+      setSelectedDate(date);
+      if (Platform.OS === 'android') {
+        setShowDatePicker(true);
+      } else {
+        setIsEditing(true);
+      }
+    } else {
+      setEditValue(user[field]?.toString() || '');
+      setIsEditing(true);
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingField) return;
 
-    // Basic validation
-    if (editValue.trim() === '') {
-      Alert.alert('Error', 'Please enter a valid value');
-      return;
-    }
+    try {
+      setIsSaving(true);
+      let valueToSave = editValue;
 
-    // Phone number validation
-    if (
-      editingField === 'phoneNumber' &&
-      !/^\+?\d{10,}$/.test(editValue.replace(/\s/g, ''))
-    ) {
-      Alert.alert('Error', 'Please enter a valid phone number');
-      return;
-    }
+      if (editingField === 'date_of_birth') {
+        valueToSave = selectedDate.toISOString().split('T')[0];
+        await handleSaveDate(valueToSave);
+        return;
+      }
 
-    setUser(prev => ({
-      ...prev,
-      [editingField]: editValue,
-    }));
-    setIsEditing(false);
-    setEditingField(null);
-    setShowCountryPicker(false);
+      if (editingField !== 'country' && typeof valueToSave === 'string') {
+        valueToSave = valueToSave.trim();
+        if (valueToSave === '') {
+          Alert.alert('Error', 'Please enter a valid value');
+          return;
+        }
+      }
+
+      if (
+        editingField === 'phone_number' &&
+        !/^\+?\d{10,}$/.test(valueToSave.replace(/\s/g, ''))
+      ) {
+        Alert.alert('Error', 'Please enter a valid phone number');
+        return;
+      }
+
+      const updateData: ProfileUpdateData = {
+        [editingField]: valueToSave,
+      };
+
+      await profileService.updateProfile(updateData);
+      setUser(prev => ({
+        ...prev,
+        [editingField]: valueToSave,
+      }));
+
+      setEditingField(null);
+      setShowCountryPicker(false);
+      setIsEditing(false);
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to update profile',
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
+
   const filteredCountries = countries.filter(country =>
     country.label.toLowerCase().includes(countrySearch.toLowerCase()),
   );
+  const handleDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (date) {
+      setSelectedDate(date);
+      const formattedDate = date.toISOString().split('T')[0];
+      setEditValue(formattedDate);
+
+      if (Platform.OS === 'android') {
+        handleSaveDate(formattedDate);
+      }
+    }
+  };
+
+  const handleSaveDate = async (dateValue: string) => {
+    try {
+      setIsSaving(true);
+      const updateData: ProfileUpdateData = {
+        dateOfBirth: dateValue,
+      };
+
+      await profileService.updateProfile(updateData);
+      setUser(prev => ({
+        ...prev,
+        date_of_birth: dateValue,
+      }));
+
+      setEditingField(null);
+      setIsEditing(false);
+      Alert.alert('Success', 'Date of birth updated successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update date of birth');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const renderCountryPicker = () => (
     <Modal
@@ -238,18 +355,20 @@ const UserProfile: React.FC = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Edit {field.label}</Text>
 
-            {field.type === 'gender' ? (
+            {field.type === 'date' && Platform.OS === 'ios' ? (
+              renderDateField()
+            ) : field.type === 'gender' ? (
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={editValue}
                   onValueChange={value => setEditValue(value)}
-                  style={styles.picker}>
+                  style={[styles.picker, {color: '#FFFFFF'}]}>
                   {genderOptions.map(option => (
                     <Picker.Item
                       key={option.value}
                       label={option.label}
                       value={option.value}
-                      color="#FFFFFF"
+                      color={Platform.OS === 'ios' ? '#FFFFFF' : '#000000'}
                     />
                   ))}
                 </Picker>
@@ -278,28 +397,70 @@ const UserProfile: React.FC = () => {
                 numberOfLines={field.type === 'multiline' ? 4 : 1}
                 autoFocus
                 keyboardType={
-                  field.key === 'phoneNumber' ? 'phone-pad' : 'default'
+                  field.key === 'phone_number' ? 'phone-pad' : 'default'
                 }
               />
             )}
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                onPress={() => setIsEditing(false)}
+                onPress={() => {
+                  setIsEditing(false);
+                  setShowDatePicker(false);
+                }}
                 style={[styles.modalButton, styles.cancelButton]}>
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSave}
-                style={[styles.modalButton, styles.saveButton]}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
+              {(field.type !== 'date' || Platform.OS === 'ios') && (
+                <TouchableOpacity
+                  onPress={handleSave}
+                  disabled={isSaving}
+                  style={[styles.modalButton, styles.saveButton]}>
+                  {isSaving ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.buttonText}>Save</Text>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
       </Modal>
     );
   };
+  const renderDateField = () => {
+    if (Platform.OS === 'android') {
+      return showDatePicker ? (
+        <DateTimePicker
+          testID="dateTimePicker"
+          value={selectedDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          maximumDate={new Date()}
+        />
+      ) : null;
+    }
+
+    return (
+      <DateTimePicker
+        value={selectedDate}
+        mode="date"
+        display="spinner"
+        onChange={handleDateChange}
+        maximumDate={new Date()}
+      />
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -308,11 +469,23 @@ const UserProfile: React.FC = () => {
         <TouchableOpacity
           style={styles.profileImageContainer}
           onPress={handleImagePick}
+          disabled={isSaving}
           activeOpacity={0.8}>
-          <Image source={{uri: user.imageUrl}} style={styles.profileImage} />
-          <View style={styles.imageEditBadge}>
-            <Icon name="camera-alt" size={16} color="#FFFFFF" />
-          </View>
+          <Image
+            source={
+              user.imageUrl ? {uri: user.imageUrl} : DEFAULT_PROFILE_IMAGE
+            }
+            style={styles.profileImage}
+          />
+          {isSaving ? (
+            <View style={styles.imageLoadingOverlay}>
+              <ActivityIndicator color="#FFFFFF" />
+            </View>
+          ) : (
+            <View style={styles.imageEditBadge}>
+              <Icon name="camera-alt" size={16} color="#FFFFFF" />
+            </View>
+          )}
           {user.subscriptionType === 'premium' && (
             <View style={styles.premiumBadge}>
               <Icon name="star" size={16} color="#FFD700" />
@@ -321,8 +494,8 @@ const UserProfile: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.username}>@{user.username}</Text>
+          <Text style={styles.userName}>{user.full_name}</Text>
+          <Text style={styles.username}>{user.email}</Text>
           <Text style={styles.bio}>{user.bio}</Text>
 
           <View style={styles.statsContainer}>
@@ -349,12 +522,13 @@ const UserProfile: React.FC = () => {
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>{field.label}</Text>
               <Text style={styles.detailValue}>
-                {user[field.key]?.toString()}
+                {user[field.key]?.toString() || '-'}
               </Text>
             </View>
             {field.editable && (
               <TouchableOpacity
                 onPress={() => handleEdit(field.key)}
+                disabled={isSaving}
                 style={styles.editButton}
                 activeOpacity={0.7}>
                 <Icon name="edit" size={20} color="#4A90E2" />
@@ -366,237 +540,9 @@ const UserProfile: React.FC = () => {
 
       {renderEditModal()}
       {renderCountryPicker()}
+      {Platform.OS === 'android' && renderDateField()}
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
-  header: {
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    backgroundColor: '#282828',
-  },
-  headerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 150,
-    backgroundColor: '#404040',
-  },
-  profileImageContainer: {
-    position: 'relative',
-    alignSelf: 'center',
-    marginBottom: 15,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: '#121212',
-  },
-  imageEditBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#4A90E2',
-    borderRadius: 12,
-    padding: 6,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  premiumBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#282828',
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 2,
-    borderColor: '#FFD700',
-  },
-  userInfo: {
-    alignItems: 'center',
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  username: {
-    fontSize: 16,
-    color: '#B3B3B3',
-    marginBottom: 8,
-  },
-  bio: {
-    fontSize: 14,
-    color: '#B3B3B3',
-    textAlign: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 20,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  stat: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#B3B3B3',
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#404040',
-  },
-  detailsContainer: {
-    padding: 20,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#282828',
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: '#B3B3B3',
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  editButton: {
-    padding: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#282828',
-    borderRadius: 12,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  input: {
-    backgroundColor: '#404040',
-    borderRadius: 8,
-    padding: 12,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  multilineInput: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  modalButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginLeft: 12,
-  },
-  cancelButton: {
-    backgroundColor: '#404040',
-  },
-  saveButton: {
-    backgroundColor: '#4A90E2',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  pickerContainer: {
-    backgroundColor: '#404040',
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  picker: {
-    color: '#FFFFFF',
-  },
-  countryPickerModal: {
-    height: '70%',
-    maxHeight: 600,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#404040',
-    borderRadius: 8,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#FFFFFF',
-    padding: 12,
-    fontSize: 16,
-  },
-  countryList: {
-    marginBottom: 16,
-  },
-  countryItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#404040',
-  },
-  countryItemText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  countryPickerButton: {
-    backgroundColor: '#404040',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  countryPickerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-});
 
 export default UserProfile;

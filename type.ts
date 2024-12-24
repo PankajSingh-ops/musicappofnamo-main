@@ -64,13 +64,15 @@ export interface Artist {
 export interface UserType {
   id: string;
   name: string;
+  full_name: string;
+  email:string;
   username: string;
   followers: number;
   following: number;
   bio: string;
-  dateOfBirth: string;
+  date_of_birth: string;
   gender: 'male' | 'female' | 'other';
-  phoneNumber: string;
+  phone_number: string;
   country: string;
   subscriptionType: 'free' | 'premium';
   imageUrl: string | null; // Add this property

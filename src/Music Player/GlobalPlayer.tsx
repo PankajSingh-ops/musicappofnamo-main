@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Image,
   TouchableOpacity,
-  Dimensions,
   Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Track } from '../../type';
+import {Track} from '../../type';
 import ExpandedPlayer from './ExpandedTrack';
 
 interface GlobalPlayerProps {
@@ -50,17 +49,23 @@ const GlobalPlayer: React.FC<GlobalPlayerProps> = ({
         activeOpacity={0.9}
         onPress={handlePress}
         style={styles.playerContainer}>
-        <Animated.View style={[styles.playerContent, {
-          transform: [{
-            scale: animation.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 0.98],
-            }),
-          }],
-        }]}>
+        <Animated.View
+          style={[
+            styles.playerContent,
+            {
+              transform: [
+                {
+                  scale: animation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 0.98],
+                  }),
+                },
+              ],
+            },
+          ]}>
           <View style={styles.leftSection}>
             <Image
-              source={{ uri: currentTrack.artwork }}
+              source={{uri: currentTrack.artwork}}
               style={styles.playerImage}
             />
             <View style={styles.playerInfo}>
@@ -74,17 +79,17 @@ const GlobalPlayer: React.FC<GlobalPlayerProps> = ({
           </View>
 
           <View style={styles.playerControls}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={onPrevious}
               style={styles.controlButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Icon name="play-skip-back" size={22} color="#fff" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={onPlayPause}
               style={styles.playPauseButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Icon
                 name={isPlaying ? 'pause' : 'play'}
                 size={28}
@@ -95,14 +100,14 @@ const GlobalPlayer: React.FC<GlobalPlayerProps> = ({
             <TouchableOpacity
               onPress={onNext}
               style={styles.controlButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Icon name="play-skip-forward" size={22} color="#fff" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={onToggleFavorite}
               style={[styles.controlButton, styles.favoriteButton]}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Icon name="heart" size={22} color="#1DB954" />
             </TouchableOpacity>
           </View>
@@ -146,7 +151,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
-    paddingBottom: 16, // Extra padding for bottom devices with home indicator
+    paddingBottom: 16,
   },
   leftSection: {
     flexDirection: 'row',

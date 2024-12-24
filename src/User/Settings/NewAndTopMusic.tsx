@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,10 @@ import {
   FlatList,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import TrackPlayer, { useTrackPlayerEvents, Event, State } from 'react-native-track-player';
 import GlobalPlayer from '../../Music Player/GlobalPlayer';
 import TrackItem from '../../Music Player/TrackItem';
-import { setupPlayer } from '../../components/TrackPlayer';
 import { Track } from '../../../type';
+import { useMusicPlayer } from '../../Music Player/MusicContext';
 
 // Sample data for new music
 const newMusicData: Track[] = [
@@ -19,8 +18,8 @@ const newMusicData: Track[] = [
     title: 'New Release 1',
     artist: 'Artist 1',
     url: require('../../../audio/lamhe.mp3'),
-    artwork: 'https://example.com/artwork1.jpg',
-    duration:'3:50'
+    artwork: 'https://d1csarkz8obe9u.cloudfront.net/posterpreviews/pop-music-album-cover-design-template-%281%29-f3b873e61465d4524bb99bf02a56c649_screen.jpg?ts=1706311822',
+    duration: '3:50'
   },
   // Add more tracks as needed
 ];
@@ -31,8 +30,8 @@ const topMusicData: Track[] = [
     title: 'Top Hit 1',
     artist: 'Artist 1',
     url: require('../../../audio/hindi.mp3'),
-    artwork: 'https://example.com/topartwork1.jpg',
-    duration:'5:00'
+    artwork: 'https://img.freepik.com/free-vector/gradient-album-cover-template_23-2150597431.jpg',
+    duration: '5:00'
   },
   // Add more tracks as needed
 ];
@@ -43,84 +42,17 @@ interface MusicScreenProps {
 }
 
 const MusicScreen: React.FC<MusicScreenProps> = ({ title, musicData }) => {
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-
-  useEffect(() => {
-    const initializePlayer = async () => {
-      try {
-        await setupPlayer();
-        await TrackPlayer.reset();
-        const tracks = musicData.map(track => ({
-          id: track.id,
-          url: track.url,
-          title: track.title,
-          artist: track.artist,
-          artwork: track.artwork,
-        }));
-        await TrackPlayer.add(tracks);
-      } catch (error) {
-        console.error('Error initializing player:', error);
-      }
-    };
-
-    initializePlayer();
-  }, [musicData]);
-
-  useTrackPlayerEvents([Event.PlaybackState], async (event) => {
-    if (event.type === Event.PlaybackState) {
-      const state = await TrackPlayer.getState();
-      setIsPlaying(state === State.Playing);
-    }
-  });
+  const { 
+    currentTrack, 
+    isPlaying, 
+    playTrack, 
+    togglePlayback, 
+    skipToNext, 
+    skipToPrevious 
+  } = useMusicPlayer();
 
   const handlePlayTrack = async (track: Track) => {
-    try {
-      const index = musicData.findIndex(t => t.id === track.id);
-      await TrackPlayer.skip(index);
-      setCurrentTrack(track);
-      await TrackPlayer.play();
-      setIsPlaying(true);
-    } catch (error) {
-      console.error('Error playing track:', error);
-    }
-  };
-
-  const handlePlayPause = async () => {
-    try {
-      if (isPlaying) {
-        await TrackPlayer.pause();
-      } else {
-        await TrackPlayer.play();
-      }
-      setIsPlaying(!isPlaying);
-    } catch (error) {
-      console.error('Error toggling play/pause:', error);
-    }
-  };
-
-  const handleNext = async () => {
-    try {
-      await TrackPlayer.skipToNext();
-      const trackIndex = await TrackPlayer.getCurrentTrack();
-      if (trackIndex !== null) {
-        setCurrentTrack(musicData[trackIndex]);
-      }
-    } catch (error) {
-      console.error('Error skipping to next track:', error);
-    }
-  };
-
-  const handlePrevious = async () => {
-    try {
-      await TrackPlayer.skipToPrevious();
-      const trackIndex = await TrackPlayer.getCurrentTrack();
-      if (trackIndex !== null) {
-        setCurrentTrack(musicData[trackIndex]);
-      }
-    } catch (error) {
-      console.error('Error skipping to previous track:', error);
-    }
+    await playTrack(track, musicData);
   };
 
   const handleToggleFavorite = () => {
@@ -160,24 +92,16 @@ const MusicScreen: React.FC<MusicScreenProps> = ({ title, musicData }) => {
       {currentTrack && (
         <GlobalPlayer
           currentTrack={currentTrack}
-          onPlayPause={handlePlayPause}
+          onPlayPause={togglePlayback}
           isPlaying={isPlaying}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
+          onNext={skipToNext}
+          onPrevious={skipToPrevious}
           onToggleFavorite={handleToggleFavorite}
-          onClose={() => setCurrentTrack(null)}
+          onClose={() => {/* Optional: Implement close behavior */}}
         />
       )}
     </View>
   );
-};
-
-export const NewMusic: React.FC = () => {
-  return <MusicScreen title="New Release" musicData={newMusicData} />;
-};
-
-export const TopMusic: React.FC = () => {
-  return <MusicScreen title="Top Music" musicData={topMusicData} />;
 };
 
 const styles = StyleSheet.create({
@@ -215,5 +139,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export const NewMusic: React.FC = () => {
+  return <MusicScreen title="New Release" musicData={newMusicData} />;
+};
+
+export const TopMusic: React.FC = () => {
+  return <MusicScreen title="Top Music" musicData={topMusicData} />;
+};
 
 export default MusicScreen;

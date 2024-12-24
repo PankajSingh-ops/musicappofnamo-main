@@ -19,48 +19,52 @@ export default function RegisterScreen({route, navigation}: any) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = async () => {
-    // Basic client-side validation
-    if (!fullName || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
+  // In RegisterScreen.tsx
+const handleRegister = async () => {
+  // Basic client-side validation
+  if (!fullName || !email || !password) {
+    Alert.alert('Error', 'Please fill in all fields');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      console.log('Sending registration request with:', {
+  setLoading(true);
+  try {
+    console.log('Sending registration request with:', {
+      fullName,
+      email,
+      password,
+      role,
+    });
+
+    const response = await axios.post(
+      'http://10.0.2.2:3000/api/auth/register',
+      {
         fullName,
         email,
         password,
         role,
-      });
+      },
+    );
 
-      const response = await axios.post(
-        'http://10.0.2.2:3000/api/auth/register',
-        {
-          fullName,
-          email,
-          password,
-          role,
+    // Handle successful registration
+    Alert.alert('Success', response.data.message, [
+      {
+        text: 'OK',
+        onPress: () => {
+          navigation.navigate('SignIn', {email});
         },
-      );
-
-      // Handle successful registration
-      Alert.alert('Success', response.data.message, [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.navigate('SignIn', {email});
-          },
-        },
-      ]);
-    } catch (error: any) {
-      console.error('Full error object:', error);
-      Alert.alert('Registration Error', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      },
+    ]);
+  } catch (error: any) {
+    console.error('Registration error:', error.response?.data || error.message);
+    Alert.alert(
+      'Registration Error',
+      error.response?.data?.details || error.response?.data?.error || 'An error occurred during registration'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView

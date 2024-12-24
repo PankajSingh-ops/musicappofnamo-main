@@ -18,12 +18,14 @@ import GenreDetails from './src/User/Settings/GenreDetails';
 import {NewMusic, TopMusic} from './src/User/Settings/NewAndTopMusic';
 import {ArtistDetailPage, ArtistMainPage} from './src/Artist/ArtistMainPage';
 import UserProfile from './src/User/UserProfile';
+import { MusicProvider } from './src/Music Player/MusicContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const App = () => {
   return (
     <AuthProvider>
+         <MusicProvider>
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Splash"
@@ -50,6 +52,7 @@ const App = () => {
           <Stack.Screen name="UserProfile" component={UserProfile} />
         </Stack.Navigator>
       </NavigationContainer>
+      </MusicProvider>
     </AuthProvider>
   );
 };
