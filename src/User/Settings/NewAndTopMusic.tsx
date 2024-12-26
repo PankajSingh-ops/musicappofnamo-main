@@ -1,27 +1,21 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-} from 'react-native';
+import {View, Text, StyleSheet, FlatList} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import GlobalPlayer from '../../Music Player/GlobalPlayer';
 import TrackItem from '../../Music Player/TrackItem';
-import { Track } from '../../../type';
-import { useMusicPlayer } from '../../Music Player/MusicContext';
+import {Track} from '../../../type';
+import {useMusicPlayer} from '../../Music Player/MusicContext';
 
-// Sample data for new music
 const newMusicData: Track[] = [
   {
     id: 'new1',
     title: 'New Release 1',
     artist: 'Artist 1',
     url: require('../../../audio/lamhe.mp3'),
-    artwork: 'https://d1csarkz8obe9u.cloudfront.net/posterpreviews/pop-music-album-cover-design-template-%281%29-f3b873e61465d4524bb99bf02a56c649_screen.jpg?ts=1706311822',
-    duration: '3:50'
+    artwork:
+      'https://d1csarkz8obe9u.cloudfront.net/posterpreviews/pop-music-album-cover-design-template-%281%29-f3b873e61465d4524bb99bf02a56c649_screen.jpg?ts=1706311822',
+    duration: '3:50',
   },
-  // Add more tracks as needed
 ];
 
 const topMusicData: Track[] = [
@@ -30,8 +24,18 @@ const topMusicData: Track[] = [
     title: 'Top Hit 1',
     artist: 'Artist 1',
     url: require('../../../audio/hindi.mp3'),
-    artwork: 'https://img.freepik.com/free-vector/gradient-album-cover-template_23-2150597431.jpg',
-    duration: '5:00'
+    artwork:
+      'https://img.freepik.com/free-vector/gradient-album-cover-template_23-2150597431.jpg',
+    duration: '5:00',
+  },
+  {
+    id: 'top2',
+    title: 'Top Hit 2',
+    artist: 'Artist 2',
+    url: require('../../../audio/faasle.mp3'),
+    artwork:
+      'https://img.freepik.com/free-vector/gradient-album-cover-template_23-2150597431.jpg',
+    duration: '5:00',
   },
   // Add more tracks as needed
 ];
@@ -41,14 +45,14 @@ interface MusicScreenProps {
   musicData: Track[];
 }
 
-const MusicScreen: React.FC<MusicScreenProps> = ({ title, musicData }) => {
-  const { 
-    currentTrack, 
-    isPlaying, 
-    playTrack, 
-    togglePlayback, 
-    skipToNext, 
-    skipToPrevious 
+const MusicScreen: React.FC<MusicScreenProps> = ({title, musicData}) => {
+  const {
+    currentTrack,
+    isPlaying,
+    playTrack,
+    togglePlayback,
+    skipToNext,
+    skipToPrevious,
   } = useMusicPlayer();
 
   const handlePlayTrack = async (track: Track) => {
@@ -56,19 +60,20 @@ const MusicScreen: React.FC<MusicScreenProps> = ({ title, musicData }) => {
   };
 
   const handleToggleFavorite = () => {
-    // Implement favorite toggling logic
     console.log('Toggle favorite');
   };
 
-  const renderTrackItem = ({ item }: { item: Track }) => {
+  const renderTrackItem = ({item}: {item: Track}) => {
     const isCurrentlyPlaying = currentTrack?.id === item.id;
-    
+
     return (
       <TrackItem
         item={item}
         onPlay={handlePlayTrack}
         isPlaying={isCurrentlyPlaying}
-        textStyle={isCurrentlyPlaying ? styles.playingTrackText : styles.trackText}
+        textStyle={
+          isCurrentlyPlaying ? styles.playingTrackText : styles.trackText
+        }
       />
     );
   };
@@ -97,7 +102,8 @@ const MusicScreen: React.FC<MusicScreenProps> = ({ title, musicData }) => {
           onNext={skipToNext}
           onPrevious={skipToPrevious}
           onToggleFavorite={handleToggleFavorite}
-          onClose={() => {/* Optional: Implement close behavior */}}
+          onClose={() => {
+          }}
         />
       )}
     </View>

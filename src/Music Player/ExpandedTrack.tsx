@@ -9,19 +9,10 @@ import {
   Dimensions,
   Modal,
   SafeAreaView,
-  ScrollView,
-  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import TrackPlayer, {useProgress} from 'react-native-track-player';
 import {Track} from '../../type';
-
-interface Comment {
-  id: string;
-  text: string;
-  username: string;
-  timestamp: Date;
-}
 
 interface ExpandedPlayerProps {
   isVisible: boolean;
@@ -36,7 +27,7 @@ interface ExpandedPlayerProps {
   onToggleRepeat: () => void;
   isSaved: boolean;
   isShuffled: boolean;
-  repeatMode: 'off' | 'all' | 'one';
+  repeatMode: 'off' | 'all' | 'one';  // Updated to match the types used in ExpandedPlayer
 }
 
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
@@ -56,13 +47,8 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
 }) => {
   const progress = useProgress();
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [showCommentModal, setShowCommentModal] = useState(false);
-  const [commentText, setCommentText] = useState('');
   const [likes, setLikes] = useState(0);
-  const [dislikes, setDislikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
-  const [isDisliked, setIsDisliked] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
 
   useEffect(() => {
     if (isVisible) {
@@ -95,41 +81,11 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
       setLikes(prev => prev - 1);
       setIsLiked(false);
     } else {
-      if (isDisliked) {
-        setDislikes(prev => prev - 1);
-        setIsDisliked(false);
-      }
       setLikes(prev => prev + 1);
       setIsLiked(true);
     }
   };
 
-  const handleDislike = () => {
-    if (isDisliked) {
-      setDislikes(prev => prev - 1);
-      setIsDisliked(false);
-    } else {
-      if (isLiked) {
-        setLikes(prev => prev - 1);
-        setIsLiked(false);
-      }
-      setDislikes(prev => prev + 1);
-      setIsDisliked(true);
-    }
-  };
-
-  const handleAddComment = () => {
-    if (commentText.trim()) {
-      const newComment: Comment = {
-        id: Date.now().toString(),
-        text: commentText,
-        username: 'User', // Replace with actual username
-        timestamp: new Date(),
-      };
-      setComments(prev => [newComment, ...prev]);
-      setCommentText('');
-    }
-  };
 
   const getRepeatIcon = () => {
     switch (repeatMode) {
@@ -156,11 +112,14 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             <Icon name="chevron-down" size={30} color="#fff" />
           </TouchableOpacity>
 
-          <View style={styles.artworkContainer}>
-            <Image
-              source={{uri: currentTrack.artwork}}
-              style={styles.artwork}
-            />
+          <View style={styles.artworkWrapper}>
+            <View style={styles.mirrorEffect} />
+            <View style={styles.artworkContainer}>
+              <Image
+                source={{uri: currentTrack.artwork}}
+                style={styles.artwork}
+              />
+            </View>
           </View>
 
           <View style={styles.infoContainer}>
@@ -181,24 +140,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleDislike}
-              style={styles.interactionButton}>
-              <Icon
-                name={isDisliked ? 'thumbs-down' : 'thumbs-down-outline'}
-                size={24}
-                color={isDisliked ? '#ff4444' : '#fff'}
-              />
-              <Text style={styles.interactionCount}>{dislikes}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setShowCommentModal(true)}
-              style={styles.interactionButton}>
-              <Icon name="chatbubble-outline" size={24} color="#fff" />
-              <Text style={styles.interactionCount}>{comments.length}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               onPress={onToggleSave}
               style={styles.interactionButton}>
               <Icon
@@ -206,6 +147,23 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
                 size={24}
                 color={isSaved ? '#1DB954' : '#fff'}
               />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                /* Handle download */
+              }}
+              style={styles.interactionButton}>
+              <Icon name="download-outline" size={24} color="#fff" />
+              <Text style={styles.interactionCount}>128</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                /* Handle share */
+              }}
+              style={styles.interactionButton}>
+              <Icon name="share-social-outline" size={24} color="#fff" />
+              <Text style={styles.interactionCount}>45</Text>
             </TouchableOpacity>
           </View>
 
@@ -260,55 +218,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
             </View>
           </View>
         </Animated.View>
-
-        <Modal
-          visible={showCommentModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowCommentModal(false)}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Comments</Text>
-                <TouchableOpacity
-                  onPress={() => setShowCommentModal(false)}
-                  style={styles.modalCloseButton}>
-                  <Icon name="close" size={24} color="#fff" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.commentInput}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Add a comment..."
-                  placeholderTextColor="#808080"
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  multiline
-                />
-                <TouchableOpacity
-                  onPress={handleAddComment}
-                  style={styles.addCommentButton}>
-                  <Icon name="send" size={24} color="#1DB954" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.commentsList}>
-                {comments.map(comment => (
-                  <View key={comment.id} style={styles.commentItem}>
-                    <View style={styles.commentHeader}>
-                      <Text style={styles.username}>{comment.username}</Text>
-                      <Text style={styles.timestamp}>
-                        {comment.timestamp.toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <Text style={styles.commentText}>{comment.text}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
       </SafeAreaView>
     </Modal>
   );
@@ -318,6 +227,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
+  },
+  artworkWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+
+  mirrorEffect: {
+    position: 'absolute',
+    bottom: -100,
+    width: Dimensions.get('window').width - 80,
+    height: (Dimensions.get('window').width - 80) / 2,
+    backgroundColor: 'transparent',
+    transform: [{scaleY: -1}],
+    opacity: 0.4,
+    borderRadius: 20,
+    zIndex: -1,
   },
   contentContainer: {
     flex: 1,
@@ -330,7 +256,17 @@ const styles = StyleSheet.create({
   artworkContainer: {
     alignItems: 'center',
     marginTop: 20,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 15,
   },
+
   artwork: {
     width: Dimensions.get('window').width - 80,
     height: Dimensions.get('window').width - 80,
@@ -353,15 +289,20 @@ const styles = StyleSheet.create({
   },
   interactionContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between', // Changed from space-around
     marginTop: 20,
     paddingVertical: 10,
+    paddingHorizontal: 20,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#404040',
   },
   interactionButton: {
     alignItems: 'center',
+    paddingHorizontal: 8,
+    display: 'flex',
+    flexDirection: 'row',
+    gap:5
   },
   interactionCount: {
     color: '#fff',
@@ -420,47 +361,6 @@ const styles = StyleSheet.create({
   modalCloseButton: {
     padding: 8,
   },
-  commentInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#404040',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 16,
-  },
-  input: {
-    flex: 1,
-    color: '#fff',
-    padding: 8,
-  },
-  addCommentButton: {
-    padding: 8,
-  },
-  commentsList: {
-    flex: 1,
-  },
-  commentItem: {
-    backgroundColor: '#404040',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  username: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  timestamp: {
-    color: '#b3b3b3',
-    fontSize: 12,
-  },
-  commentText: {
-    color: '#fff',
-  },
   mainControls: {
     marginTop: 30,
     marginBottom: 20,
@@ -485,7 +385,7 @@ const styles = StyleSheet.create({
   },
   activeControl: {
     backgroundColor: '#1DB954',
-    transform: [{ scale: 1.1 }],
+    transform: [{scale: 1.1}],
   },
   playPauseButton: {
     backgroundColor: '#1DB954',
@@ -502,8 +402,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
-    transform: [{ scale: 1.1 }],
-  }
+    transform: [{scale: 1.1}],
+  },
 });
 
 export default ExpandedPlayer;

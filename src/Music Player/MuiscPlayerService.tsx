@@ -265,15 +265,6 @@ class MusicPlayerService implements IMusicPlayerService {
     }
   }
 
-  async seekTo(position: number): Promise<void> {
-    try {
-      await TrackPlayer.seekTo(position);
-    } catch (error) {
-      console.error('Error seeking to position:', error);
-      throw error;
-    }
-  }
-
   async getDuration(): Promise<number> {
     try {
       return await TrackPlayer.getDuration();
@@ -288,6 +279,85 @@ class MusicPlayerService implements IMusicPlayerService {
       return await TrackPlayer.getPosition();
     } catch (error) {
       console.error('Error getting position:', error);
+      throw error;
+    }
+  }
+  // Add these methods to your MusicPlayerService class
+
+  async setShuffleMode(enabled: boolean): Promise<void> {
+    try {
+      if (enabled) {
+        const queue = await TrackPlayer.getQueue();
+        const currentTrack = await TrackPlayer.getCurrentTrack();
+        const shuffledQueue = [...queue];
+
+        if (currentTrack !== null) {
+          const currentTrackItem = shuffledQueue.splice(currentTrack, 1)[0];
+
+          // Fisher-Yates shuffle algorithm
+          for (let i = shuffledQueue.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledQueue[i], shuffledQueue[j]] = [
+              shuffledQueue[j],
+              shuffledQueue[i],
+            ];
+          }
+
+          shuffledQueue.unshift(currentTrackItem);
+        }
+
+        await TrackPlayer.reset();
+        await TrackPlayer.add(shuffledQueue);
+
+        // Resume playing current track
+        if (currentTrack !== null) {
+          await TrackPlayer.skip(0);
+          await TrackPlayer.play();
+        }
+      } else {
+        const currentTrack = await this.getCurrentTrack();
+        await this.loadPlaylist(this.currentPlaylist, false);
+
+        if (currentTrack) {
+          const newIndex = this.currentPlaylist.findIndex(
+            t => t.id === currentTrack.id,
+          );
+          if (newIndex !== -1) {
+            await TrackPlayer.skip(newIndex);
+            await TrackPlayer.play();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error setting shuffle mode:', error);
+      throw error;
+    }
+  }
+
+  async setRepeatMode(mode: 'off' | 'track' | 'queue'): Promise<void> {
+    try {
+      switch (mode) {
+        case 'track':
+          await TrackPlayer.setRepeatMode(1); // RepeatMode.Track
+          break;
+        case 'queue':
+          await TrackPlayer.setRepeatMode(2); // RepeatMode.Queue
+          break;
+        default:
+          await TrackPlayer.setRepeatMode(0); // RepeatMode.Off
+      }
+    } catch (error) {
+      console.error('Error setting repeat mode:', error);
+      throw error;
+    }
+  }
+
+  // Make sure seekTo is properly implemented
+  async seekTo(position: number): Promise<void> {
+    try {
+      await TrackPlayer.seekTo(position);
+    } catch (error) {
+      console.error('Error seeking to position:', error);
       throw error;
     }
   }

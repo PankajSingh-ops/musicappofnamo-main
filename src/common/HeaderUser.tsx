@@ -38,7 +38,7 @@ const Header = () => {
     await logout();
     navigation.reset({
       index: 0,
-      routes: [{name: 'Auth'}],
+      routes: [{name: 'Home'}],
     });
   };
 
