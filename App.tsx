@@ -19,6 +19,9 @@ import {NewMusic, TopMusic} from './src/User/Settings/NewAndTopMusic';
 import {ArtistDetailPage, ArtistMainPage} from './src/Artist/ArtistMainPage';
 import UserProfile from './src/User/UserProfile';
 import { MusicProvider } from './src/Music Player/MusicContext';
+import PublisherAuthScreen from './src/auth/PublisherAuthPage';
+import PublisherRegisterScreen from './src/auth/PublisherRegisterScreen';
+import PublisherHomeScreen from './src/Publisher/PublisherHomeScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -34,7 +37,9 @@ const App = () => {
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Music" component={MusicPlayer} />
           <Stack.Screen name="Auth" component={AuthScreen} />
+          <Stack.Screen name="PublisherAuth" component={PublisherAuthScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="PublisherRegister" component={PublisherRegisterScreen} />
           <Stack.Screen name="SignIn" component={SignInScreen} />
           <Stack.Screen
             name="ForgetPassword"
@@ -43,6 +48,7 @@ const App = () => {
           <Stack.Screen name="VerifyOTP" component={VerifyOTPScreen} />
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           <Stack.Screen name="Userhome" component={UserHomeScreen} />
+          <Stack.Screen name="PublisherHomeScreen" component={PublisherHomeScreen} />
           <Stack.Screen name="Genre" component={Genre} />
           <Stack.Screen name="GenreDetails" component={GenreDetails} />
           <Stack.Screen name="NewReleases" component={NewMusic} />

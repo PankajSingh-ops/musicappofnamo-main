@@ -18,6 +18,9 @@ export type RootStackParamList = {
   ArtistDetail:undefined;
   ArtistMain:undefined;
   UserProfile:undefined;
+  PublisherAuth:undefined;
+  PublisherRegister:undefined;
+  PublisherHomeScreen:undefined;
 };
 
 export type SplashScreenNavigationProp = NativeStackNavigationProp<

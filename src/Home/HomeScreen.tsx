@@ -32,7 +32,7 @@ const HomeScreen = ({navigation}:any) => {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.buttonWrapper}
-          onPress={() => navigation.navigate('Auth', { role: 'publisher' })}>
+          onPress={() => navigation.navigate('PublisherAuth', { role: 'publisher' })}>
           <Text style={styles.button}>Publisher</Text>
         </TouchableOpacity>
         <TouchableOpacity

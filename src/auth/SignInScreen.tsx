@@ -72,7 +72,7 @@ const SignInScreen= ({route, navigation}:any) => {
             const userRole = user.role;
             switch (userRole) {
               case 'publisher':
-                navigation.navigate('PublisherScreen');
+                navigation.navigate('PublisherHomeScreen');
                 break;
               case 'user':
                 navigation.navigate('Userhome');
