@@ -7,6 +7,8 @@ interface MusicContextType {
   isPlaying: boolean;
   isShuffled: boolean;
   repeatMode: 'off' | 'track' | 'queue';
+  queue: Track[];  // Add this
+  setQueue: (tracks: Track[]) => void;  // Add this
   playTrack: (track: Track, playlist: Track[]) => Promise<void>;
   togglePlayback: () => Promise<void>;
   skipToNext: () => Promise<void>;
@@ -22,6 +24,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { isPlaying, currentTrack, setIsPlaying, setCurrentTrack } = usePlayerState();
   const [isShuffled, setIsShuffled] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'track' | 'queue'>('off');
+  const [queue, setQueue] = useState<Track[]>([]);
 
   useEffect(() => {
     const initializePlayer = async () => {
@@ -34,6 +37,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await musicPlayerService.playTrack(track, playlist);
     setCurrentTrack(track);
     setIsPlaying(true);
+    setQueue(playlist); // Add this to update queue when playing
   };
 
   const togglePlayback = async () => {
@@ -65,7 +69,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setRepeatMode(newMode);
     await musicPlayerService.setRepeatMode(newMode);
   };
-
   return (
     <MusicContext.Provider
       value={{
@@ -73,6 +76,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isPlaying,
         isShuffled,
         repeatMode,
+        queue, // Add this
+        setQueue, // Add this
         playTrack,
         togglePlayback,
         skipToNext,

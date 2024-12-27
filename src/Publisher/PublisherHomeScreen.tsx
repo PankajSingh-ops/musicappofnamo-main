@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet,} from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {View, StyleSheet} from 'react-native';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Header from '../common/HeaderUser';
 import HomeScreen from './HomeScreen';
@@ -24,15 +24,9 @@ const TabBarIcon = ({
   size: number;
 }) => {
   return (
-    <View style={[
-      styles.iconContainer,
-      focused && styles.focusedIconContainer
-    ]}>
-      <Icon
-        name={name}
-        color={focused ? '#FFFFFF' : '#b3b3b3'}
-        size={size}
-      />
+    <View
+      style={[styles.iconContainer, focused && styles.focusedIconContainer]}>
+      <Icon name={name} color={focused ? '#FFFFFF' : '#b3b3b3'} size={size} />
     </View>
   );
 };
@@ -42,10 +36,10 @@ const PublisherHomeScreen = () => {
     <>
       <Header />
       <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
+        screenOptions={({route}) => ({
+          tabBarIcon: ({focused, color, size}) => {
             let iconName;
-            
+
             switch (route.name) {
               case 'Home':
                 iconName = 'home';
@@ -83,27 +77,27 @@ const PublisherHomeScreen = () => {
         <Tab.Screen
           name="Home"
           component={HomeScreen}
-          options={{ tabBarLabel: '' }}
+          options={{tabBarLabel: ''}}
         />
         <Tab.Screen
           name="Favorites"
           component={FavoritesScreen}
-          options={{ tabBarLabel: '' }}
+          options={{tabBarLabel: ''}}
         />
         <Tab.Screen
           name="Add"
           component={AddMusic}
-          options={{ tabBarLabel: '' }}
+          options={{tabBarLabel: ''}}
         />
         <Tab.Screen
           name="Playlists"
           component={PublisherPlaylist}
-          options={{ tabBarLabel: '' }}
+          options={{tabBarLabel: ''}}
         />
         <Tab.Screen
           name="Analytics"
           component={AnalyticsScreen}
-          options={{ tabBarLabel: '' }}
+          options={{tabBarLabel: ''}}
         />
       </Tab.Navigator>
     </>
@@ -129,7 +123,7 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
     elevation: 0,
     shadowOpacity: 0,
-  }
+  },
 });
 
 export default PublisherHomeScreen;

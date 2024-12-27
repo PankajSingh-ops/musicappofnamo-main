@@ -42,7 +42,10 @@ class MusicPlayerService implements IMusicPlayerService {
 
     try {
       await TrackPlayer.setupPlayer({
+        maxBuffer: 1000, // Increase buffer size
         maxCacheSize: 1024 * 5, // 5mb cache
+        waitForBuffer: true, // Wait for buffer before playing
+        autoUpdateMetadata: true,
       });
 
       await TrackPlayer.updateOptions({
@@ -63,6 +66,7 @@ class MusicPlayerService implements IMusicPlayerService {
         progressUpdateEventInterval: 1,
         android: {
           appKilledPlaybackBehavior: 'StopPlaybackAndRemoveNotification',
+          alwaysPauseOnInterruption: true,
         },
         ios: {
           capabilities: [
@@ -71,6 +75,7 @@ class MusicPlayerService implements IMusicPlayerService {
             Capability.SkipToNext,
             Capability.SkipToPrevious,
           ],
+          backgroundMode: true,
         },
       });
 
@@ -96,17 +101,35 @@ class MusicPlayerService implements IMusicPlayerService {
   }
 
   private formatTrack(track: Track) {
+    // Clean up the duration if it's NaN
+    let duration = 0;
+    if (track.duration) {
+      if (typeof track.duration === 'string') {
+        // Try to parse MM:SS format
+        const parts = track.duration.split(':');
+        if (parts.length === 2) {
+          duration = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+      } else if (!isNaN(track.duration)) {
+        duration = track.duration;
+      }
+    }
+
     return {
-      id: track.id,
+      id: track.id.toString(), // Ensure ID is a string
       url: track.url,
-      title: track.title,
-      artist: track.artist,
-      artwork: track.artwork,
-      duration:
-        typeof track.duration === 'string'
-          ? parseInt(track.duration.split(':')[0]) * 60 +
-            parseInt(track.duration.split(':')[1])
-          : track.duration,
+      title: track.title || 'Unknown Title',
+      artist: track.artist || 'Unknown Artist',
+      artwork: track.artwork || undefined,
+      duration: duration || 0, // Fallback to 0 if duration is invalid
+      headers: {
+        // Add headers for Cloudflare
+        Accept: 'audio/mpeg',
+        'Content-Type': 'audio/mpeg',
+        'Cache-Control': 'no-cache',
+      },
+      pitchAlgorithm: 'LINEAR', // Add this for better audio processing
+      progressUpdateEventInterval: 1, // Update progress more frequently
     };
   }
 
@@ -180,32 +203,45 @@ class MusicPlayerService implements IMusicPlayerService {
         await this.initialize();
       }
 
-      const currentQueue = await TrackPlayer.getQueue();
-      const isNewPlaylist =
-        !currentQueue.length ||
-        !playlistTracks.every(
-          (track, index) => track.id === currentQueue[index]?.id,
-        );
+      // Format all tracks in the playlist
+      const formattedTracks = playlistTracks.map(t => this.formatTrack(t));
+      const formattedTrack = this.formatTrack(track);
 
-      if (isNewPlaylist) {
-        await this.loadPlaylist(playlistTracks, false);
-      }
+      // Reset the player before loading new tracks
+      await TrackPlayer.reset();
 
-      const trackIndex = playlistTracks.findIndex(t => t.id === track.id);
+      // Add the formatted tracks to the queue
+      await TrackPlayer.add(formattedTracks);
+
+      // Find the index of the track to play
+      const trackIndex = formattedTracks.findIndex(
+        t => t.id === formattedTrack.id,
+      );
       if (trackIndex !== -1) {
         await TrackPlayer.skip(trackIndex);
-        await TrackPlayer.play();
+        await TrackPlayer.play().catch(playError => {
+          console.warn('Play error:', playError);
+          // Attempt to recover by retrying once
+          return TrackPlayer.play();
+        });
+      } else {
+        throw new Error('Track not found in playlist');
       }
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes('already been initialized')
-      ) {
-        // Ignore initialization error and continue
-        console.log('Player already initialized, continuing...');
+      console.error('Error in playTrack:', error);
+      if (error instanceof Error) {
+        // Add more specific error handling
+        if (error.message.includes('already been initialized')) {
+          console.log('Player already initialized, continuing...');
+        } else if (error.message.includes('network')) {
+          throw new Error(
+            'Network error while loading track. Please check your connection.',
+          );
+        } else {
+          throw new Error(`Failed to play track: ${error.message}`);
+        }
       } else {
-        console.error('Error playing track:', error);
-        throw error;
+        throw new Error('An unknown error occurred while playing the track');
       }
     }
   }

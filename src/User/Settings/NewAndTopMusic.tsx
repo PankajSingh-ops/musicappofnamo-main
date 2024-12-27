@@ -5,6 +5,7 @@ import GlobalPlayer from '../../Music Player/GlobalPlayer';
 import TrackItem from '../../Music Player/TrackItem';
 import {Track} from '../../../type';
 import {useMusicPlayer} from '../../Music Player/MusicContext';
+import MusicListScreen from '../../Publisher/Common/MusicListScreen';
 
 const newMusicData: Track[] = [
   {
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
 });
 
 export const NewMusic: React.FC = () => {
-  return <MusicScreen title="New Release" musicData={newMusicData} />;
+  return <MusicListScreen/>;
 };
 
 export const TopMusic: React.FC = () => {
