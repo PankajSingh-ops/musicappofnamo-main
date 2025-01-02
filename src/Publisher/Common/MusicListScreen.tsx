@@ -17,6 +17,8 @@ import {useAuth} from '../../../asyncStorage/AsyncStorage';
 import {useMusicPlayer} from '../../Music Player/MusicContext';
 import GlobalPlayer from '../../Music Player/GlobalPlayer';
 import styles from './Css/MuiscListScreenCss';
+import TrackOptionsMenu from '../../Music Player/TrackOptionsMenu';
+import TrackItem from '../../Music Player/TrackItem';
 
 const API_BASE_URL = 'http://10.0.2.2:3000';
 
@@ -27,6 +29,8 @@ const MusicListScreen = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [playerVisible] = useState(new Animated.Value(0));
+  const [showOptions, setShowOptions] = useState<boolean>(false);
+  
 
   const {
     currentTrack,
@@ -91,6 +95,8 @@ const MusicListScreen = () => {
       });
 
       const data = await response.json();
+      console.log(data, 'data');
+      
 
       if (refreshList || page === 1) {
         setMusic(data.music || []);
@@ -145,40 +151,12 @@ const MusicListScreen = () => {
     const isCurrentlyPlaying = currentTrack?.id === item.id;
 
     return (
-      <TouchableOpacity
-        style={styles.musicItem}
-        onPress={() => handlePlayTrack(item)}>
-        <Image
-          source={{uri: item.artwork || 'https://namomusic.site/themes/volcano/img/logo.png?cache=147'}}
-          style={styles.artwork}
-        />
-        <View style={styles.musicInfo}>
-          <Text
-            style={[
-              styles.title,
-              isCurrentlyPlaying && styles.playingTrackText,
-            ]}
-            numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.artist} numberOfLines={1}>
-            {item.artist}
-          </Text>
-          <View style={styles.metadata}>
-            <Text style={styles.genre}>{item.genre}</Text>
-            {item.user_id === user?.id && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>Your Upload</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        <TouchableOpacity
-          style={styles.moreButton}
-          onPress={() => navigation.navigate('MusicDetail', {id: item.id})}>
-          <Icon name="more-vert" size={24} color="#fff" />
-        </TouchableOpacity>
-      </TouchableOpacity>
+      <TrackItem
+        item={item}
+        onPlay={handlePlayTrack}
+        isPlaying={isCurrentlyPlaying && isPlaying}
+        isSelected={isCurrentlyPlaying}
+      />
     );
   };
 
@@ -279,6 +257,7 @@ const MusicListScreen = () => {
           />
         </Animated.View>
       )}
+      
     </View>
   );
 };

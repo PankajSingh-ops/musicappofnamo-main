@@ -91,6 +91,15 @@ const AddMusic = () => {
     }
   };
 
+  const isFormComplete = () => {
+    return (
+      formData.title.trim() &&
+      formData.artist.trim() &&
+      formData.artwork &&
+      formData.url
+    );
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -247,16 +256,21 @@ const AddMusic = () => {
           <Text style={styles.uploadButtonText}>Choose Audio File</Text>
         </TouchableOpacity>
         {selectedFileName ? (
-          <View style={styles.fileInfo}>
-            <Text style={styles.fileName}>{selectedFileName}</Text>
-            {uploadProgress.audio > 0 && uploadProgress.audio < 100 && (
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${uploadProgress.audio}%` }]} />
-                <Text style={styles.progressText}>{uploadProgress.audio}%</Text>
-              </View>
-            )}
-          </View>
-        ) : null}
+  <View style={styles.fileInfo}>
+    <View style={styles.fileDetails}>
+      <Text style={styles.fileName}>{selectedFileName}</Text>
+      <Text style={styles.fileType}>
+        {selectedFileName.split('.').pop().toUpperCase()} file
+      </Text>
+    </View>
+    {uploadProgress.audio > 0 && uploadProgress.audio < 100 && (
+      <View style={styles.progressBar}>
+        <View style={[styles.progressFill, { width: `${uploadProgress.audio}%` }]} />
+        <Text style={styles.progressText}>{uploadProgress.audio}%</Text>
+      </View>
+    )}
+  </View>
+) : null}
       </View>
 
       <View style={styles.formGroup}>
@@ -281,6 +295,53 @@ const AddMusic = () => {
           ))}
         </View>
       </View>
+
+      <View style={styles.formGroup}>
+  <Text style={styles.label}>Allow Downloads</Text>
+  <View style={styles.picker}>
+    {['yes', 'no'].map(option => (
+      <TouchableOpacity
+        key={option}
+        style={[
+          styles.pickerItem,
+          formData.allowDownload === option && styles.pickerItemActive,
+        ]}
+        onPress={() => setFormData({...formData, allowDownload: option})}>
+        <Text
+          style={[
+            styles.pickerItemText,
+            formData.allowDownload === option && styles.pickerItemTextActive,
+          ]}>
+          {option.charAt(0).toUpperCase() + option.slice(1)}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+</View>
+
+<View style={styles.formGroup}>
+  <Text style={styles.label}>Display Embed Code</Text>
+  <View style={styles.picker}>
+    {['yes', 'no'].map(option => (
+      <TouchableOpacity
+        key={option}
+        style={[
+          styles.pickerItem,
+          formData.displayEmbedCode === option && styles.pickerItemActive,
+        ]}
+        onPress={() => setFormData({...formData, displayEmbedCode: option})}>
+        <Text
+          style={[
+            styles.pickerItemText,
+            formData.displayEmbedCode === option && styles.pickerItemTextActive,
+          ]}>
+          {option.charAt(0).toUpperCase() + option.slice(1)}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+</View>
+
 
       <View style={styles.formGroup}>
         <Text style={styles.label}>Tags</Text>
@@ -341,13 +402,16 @@ const AddMusic = () => {
       </View>
 
       <TouchableOpacity
-        style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-        onPress={handleSubmit}
-        disabled={loading}>
-        <Text style={styles.submitButtonText}>
-          {loading ? 'Uploading...' : 'Upload Music'}
-        </Text>
-      </TouchableOpacity>
+  style={[
+    styles.submitButton,
+    (loading || !isFormComplete()) && styles.submitButtonDisabled
+  ]}
+  onPress={handleSubmit}
+  disabled={loading || !isFormComplete()}>
+  <Text style={styles.submitButtonText}>
+    {loading ? 'Uploading...' : 'Upload Music'}
+  </Text>
+</TouchableOpacity>
     </ScrollView>
   );
 };
@@ -367,6 +431,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     color: 'white',
+  },
+  fileInfo: {
+    marginTop: 10,
+    backgroundColor: '#333',
+    padding: 10,
+    borderRadius: 8,
+  },
+  fileDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fileName: {
+    color: 'white',
+    flex: 1,
+  },
+  fileType: {
+    color: '#B62D25',
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   formGroup: {
     marginBottom: 20,
@@ -403,10 +487,6 @@ const styles = StyleSheet.create({
     height: 100,
     marginTop: 10,
     borderRadius: 8,
-  },
-  fileName: {
-    marginTop: 8,
-    color: 'black',
   },
   picker: {
     flexDirection: 'row',

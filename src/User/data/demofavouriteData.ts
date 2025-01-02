@@ -8,7 +8,7 @@ export const favoritesData: Track[] = [
     artwork:
       'https://d1csarkz8obe9u.cloudfront.net/themedlandingpages/tlp_hero_album-cover-art-73ab5b3d9b81f442cb2288630ab63acf.jpg?ts%20=%201698245952',
     duration: '3:20',
-    url: require('../../../audio/kk.mp3'),
+    url: 'https://pub-2abc3b4ca9c946a8be84d73df55326ac.r2.dev/music/5810d2cb80f2aaacfaa874583bad24b4.mp3',
   },
   {
     id: '2',

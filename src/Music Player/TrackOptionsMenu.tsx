@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,9 +7,11 @@ import {
   Modal,
   StyleSheet,
   Dimensions,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Track } from '../../type';
+import { useAuth } from '../../asyncStorage/AsyncStorage';
 
 interface TrackOptionsMenuProps {
   visible: boolean;
@@ -21,14 +24,74 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
   onClose,
   track,
 }) => {
+  const { user, token } = useAuth();
+  const [isFavorited, setIsFavorited] = useState(false);
+
+  const checkFavoriteStatus = useCallback(async () => {
+    if (!user || !token) return;
+
+    try {
+      const response = await fetch(
+        `http://10.0.2.2:3000/api/favorites/check/${track.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to check favorite status');
+      }
+
+      const data = await response.json();
+      setIsFavorited(data.isFavorited);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+      Alert.alert('Error', 'Failed to check favorite status');
+    }
+  }, [track.id, token, user]);
+
+  const handleLike = async () => {
+    if (!user || !token) {
+      Alert.alert('Error', 'Please log in to add favorites');
+      return;
+    }
+
+    try {
+      const method = isFavorited ? 'DELETE' : 'POST';
+      const url = isFavorited
+        ? `http://10.0.2.2:3000/api/favorites/${track.id}`
+        : 'http://10.0.2.2:3000/api/favorites';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: method === 'POST' ? JSON.stringify({ musicId: track.id }) : undefined,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update favorite');
+      }
+
+      const data = await response.json();
+      setIsFavorited(!isFavorited);
+      Alert.alert('Success', data.message);
+      onClose();
+    } catch (error) {
+      console.error('Error updating favorite:', error);
+      Alert.alert('Error', 'Failed to update favorites');
+    }
+  };
+
   const menuOptions = [
     {
-      icon: 'heart-outline',
-      label: 'Like',
-      onPress: () => {
-        // Handle like action
-        onClose();
-      },
+      icon: isFavorited ? 'heart' : 'heart-outline',
+      label: isFavorited ? 'Unlike' : 'Like',
+      onPress: handleLike,
     },
     {
       icon: 'add-circle-outline',
@@ -63,6 +126,12 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
       },
     },
   ];
+
+  React.useEffect(() => {
+    if (visible && user) {
+      checkFavoriteStatus();
+    }
+  }, [visible, user, checkFavoriteStatus]);
 
   return (
     <Modal

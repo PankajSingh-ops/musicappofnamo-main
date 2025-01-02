@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Dimensions,
   Modal,
   SafeAreaView,
+  LayoutRectangle,
+  GestureResponderEvent,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import TrackPlayer, {useProgress} from 'react-native-track-player';
@@ -27,7 +29,7 @@ interface ExpandedPlayerProps {
   onToggleRepeat: () => void;
   isSaved: boolean;
   isShuffled: boolean;
-  repeatMode: 'off' | 'all' | 'one';  // Updated to match the types used in ExpandedPlayer
+  repeatMode: 'off' | 'all' | 'one'; // Updated to match the types used in ExpandedPlayer
 }
 
 const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
@@ -49,6 +51,17 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
   const [fadeAnim] = useState(new Animated.Value(0));
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekPosition, setSeekPosition] = useState(0);
+  const progressBarRef = useRef<View>(null);
+  const [progressBarLayout, setProgressBarLayout] =
+    useState<LayoutRectangle | null>(null);
+
+  useEffect(() => {
+    if (!isSeeking) {
+      setSeekPosition(progress.position);
+    }
+  }, [progress.position, isSeeking]);
 
   useEffect(() => {
     if (isVisible) {
@@ -76,6 +89,30 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
     await TrackPlayer.seekTo(value);
   };
 
+  const handleStartSeeking = () => {
+    setIsSeeking(true);
+  };
+
+  const handleEndSeeking = async () => {
+    if (isSeeking) {
+      await handleSeek(seekPosition);
+      setIsSeeking(false);
+    }
+  };
+
+  const calculateSeekPosition = (event: GestureResponderEvent) => {
+    if (progressBarLayout) {
+      const touch = event.nativeEvent;
+      const touchX = touch.locationX;
+      const percentage = Math.max(
+        0,
+        Math.min(1, touchX / progressBarLayout.width),
+      );
+      const newPosition = percentage * progress.duration;
+      setSeekPosition(newPosition);
+    }
+  };
+
   const handleLike = () => {
     if (isLiked) {
       setLikes(prev => prev - 1);
@@ -85,7 +122,6 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
       setIsLiked(true);
     }
   };
-
 
   const getRepeatIcon = () => {
     switch (repeatMode) {
@@ -143,7 +179,7 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
               onPress={onToggleSave}
               style={styles.interactionButton}>
               <Icon
-                name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                name={isSaved ? 'heart' : 'heart-outline'}
                 size={24}
                 color={isSaved ? '#1DB954' : '#fff'}
               />
@@ -168,16 +204,48 @@ const ExpandedPlayer: React.FC<ExpandedPlayerProps> = ({
           </View>
 
           <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
+            <View
+              ref={progressBarRef}
+              onLayout={event => {
+                setProgressBarLayout(event.nativeEvent.layout);
+              }}
+              style={styles.progressBarContainer}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={handleStartSeeking}
+              onResponderMove={calculateSeekPosition}
+              onResponderRelease={handleEndSeeking}>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progress,
+                    {
+                      width: `${
+                        ((isSeeking ? seekPosition : progress.position) /
+                          progress.duration) *
+                        100
+                      }%`,
+                    },
+                  ]}
+                />
+              </View>
               <View
                 style={[
-                  styles.progress,
-                  {width: `${(progress.position / progress.duration) * 100}%`},
+                  styles.seekThumb,
+                  {
+                    left: `${
+                      ((isSeeking ? seekPosition : progress.position) /
+                        progress.duration) *
+                      100
+                    }%`,
+                  },
                 ]}
               />
             </View>
             <View style={styles.timeContainer}>
-              <Text style={styles.time}>{formatTime(progress.position)}</Text>
+              <Text style={styles.time}>
+                {formatTime(isSeeking ? seekPosition : progress.position)}
+              </Text>
               <Text style={styles.time}>{formatTime(progress.duration)}</Text>
             </View>
           </View>
@@ -233,7 +301,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
   },
-
+  progressContainer: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  progressBarContainer: {
+    height: 30,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: '#404040',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progress: {
+    height: '100%',
+    backgroundColor: '#1DB954',
+    borderRadius: 2,
+  },
+  seekThumb: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    backgroundColor: '#1DB954',
+    borderRadius: 6,
+    top: '50%',
+    marginTop: -6,
+    transform: [{translateX: -6}],
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  time: {
+    color: '#b3b3b3',
+    fontSize: 12,
+  },
   mirrorEffect: {
     position: 'absolute',
     bottom: -100,
@@ -302,34 +408,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     display: 'flex',
     flexDirection: 'row',
-    gap:5
+    gap: 5,
   },
   interactionCount: {
     color: '#fff',
     fontSize: 12,
     marginTop: 4,
-  },
-  progressContainer: {
-    marginTop: 20,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#404040',
-    borderRadius: 2,
-  },
-  progress: {
-    height: '100%',
-    backgroundColor: '#1DB954',
-    borderRadius: 2,
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  time: {
-    color: '#b3b3b3',
-    fontSize: 14,
   },
   controlsContainer: {
     marginTop: 20,

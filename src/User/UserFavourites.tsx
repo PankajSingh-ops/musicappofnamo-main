@@ -1,14 +1,27 @@
-import React, {useState} from 'react';
-import {View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import GlobalPlayer from '../Music Player/GlobalPlayer';
 import TrackItem from '../Music Player/TrackItem';
-import {favoritesData} from './data/demofavouriteData';
-import {Track} from '../../type';
-import {useMusicPlayer} from '../Music Player/MusicContext';
+import { Track } from '../../type';
+import { useMusicPlayer } from '../Music Player/MusicContext';
+import { useAuth } from '../../asyncStorage/AsyncStorage';
 
 const FavoritesScreen: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [favorites, setFavorites] = useState<Track[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
   const {
     currentTrack,
     isPlaying,
@@ -18,57 +31,164 @@ const FavoritesScreen: React.FC = () => {
     skipToPrevious,
   } = useMusicPlayer();
 
-  const handlePlayTrack = async (track: Track) => {
-    await playTrack(track, favoritesData);
-  };
+  const { token, user } = useAuth();
 
-  const handleRemoveTrack = async (trackId: string) => {
+  // Fetch favorites
+  const fetchFavorites = async () => {
+    if (!token) {
+      setFavorites([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // Here you would typically update your favorites list in your app's state/storage
-      console.log('Track removed:', trackId);
+      const response = await fetch('http://10.0.2.2:3000/api/favorites', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch favorites');
+      }
+
+      const data = await response.json();
+      setFavorites(data.favorites);
     } catch (error) {
-      console.error('Error removing track:', error);
+      console.error('Error fetching favorites:', error);
+      Alert.alert('Error', 'Failed to load favorites');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  const handleToggleFavorite = () => {
-    // Implement your favorite toggling logic here
-    console.log('Toggle favorite');
+  // Initial load
+  useEffect(() => {
+    fetchFavorites();
+  }, [token]);
+
+  const handlePlayTrack = async (track: Track) => {
+    await playTrack(track, favorites);
   };
 
-  const renderTrackItem = ({item}: {item: Track}) => {
+  const handleRemoveTrack = async (trackId: string) => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`http://10.0.2.2:3000/api/favorites/${trackId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove from favorites');
+      }
+
+      // Update local state
+      setFavorites(prevFavorites => 
+        prevFavorites.filter(track => track.id !== trackId)
+      );
+
+      Alert.alert('Success', 'Track removed from favorites');
+    } catch (error) {
+      console.error('Error removing track:', error);
+      Alert.alert('Error', 'Failed to remove track from favorites');
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!currentTrack || !token) return;
+
+    try {
+      const response = await fetch(`http://10.0.2.2:3000/api/favorites/${currentTrack.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove from favorites');
+      }
+
+      // Update local state
+      setFavorites(prevFavorites => 
+        prevFavorites.filter(track => track.id !== currentTrack.id)
+      );
+
+      Alert.alert('Success', 'Track removed from favorites');
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      Alert.alert('Error', 'Failed to update favorites');
+    }
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchFavorites();
+  };
+
+  const renderTrackItem = ({ item }: { item: Track }) => {
     const isCurrentlyPlaying = currentTrack?.id === item.id;
 
     return (
       <TrackItem
         item={item}
         onPlay={handlePlayTrack}
-        isPlaying={isCurrentlyPlaying}
+        isPlaying={isCurrentlyPlaying && isPlaying}
         isEditing={isEditMode}
         onRemove={handleRemoveTrack}
-        textStyle={
-          isCurrentlyPlaying ? styles.playingTrackText : styles.trackText
-        }
+        isSelected={isCurrentlyPlaying}
       />
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.screenContainer, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#1DB954" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={[styles.screenContainer, styles.centerContent]}>
+        <Icon name="lock-closed-outline" size={80} color="#888" />
+        <Text style={styles.emptyText}>Please log in to view favorites</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screenContainer}>
       <View style={styles.headerContainer}>
         <Text style={styles.screenTitle}>Favorites</Text>
-        <TouchableOpacity onPress={() => setIsEditMode(!isEditMode)}>
-          <Icon
-            name={isEditMode ? 'close' : 'create-outline'}
-            size={24}
-            color="#fff"
-          />
-        </TouchableOpacity>
+        {favorites.length > 0 && (
+          <TouchableOpacity onPress={() => setIsEditMode(!isEditMode)}>
+            <Icon
+              name={isEditMode ? 'close' : 'create-outline'}
+              size={24}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        )}
       </View>
+
       <FlatList
-        data={favoritesData}
+        data={favorites}
         keyExtractor={item => item.id}
         renderItem={renderTrackItem}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#1DB954"
+          />
+        }
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
             <Icon name="heart-outline" size={80} color="#888" />
@@ -76,6 +196,7 @@ const FavoritesScreen: React.FC = () => {
           </View>
         )}
       />
+
       {currentTrack && (
         <GlobalPlayer
           currentTrack={currentTrack}
@@ -85,7 +206,7 @@ const FavoritesScreen: React.FC = () => {
           onPrevious={skipToPrevious}
           onToggleFavorite={handleToggleFavorite}
           onClose={() => {
-            /* Optional: Implement close behavior */
+            // Optional: Implement close behavior
           }}
         />
       )}
@@ -98,6 +219,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
     padding: 15,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContainer: {
     flexDirection: 'row',
@@ -119,14 +244,7 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 20,
     fontSize: 18,
-  },
-  trackText: {
-    color: '#fff',
-  },
-  playingTrackText: {
-    color: '#1DB954', // Spotify-like green color for playing track
-    fontWeight: 'bold',
-    backgroundColor:'red'
+    textAlign: 'center',
   },
 });
 

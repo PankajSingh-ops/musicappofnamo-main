@@ -28,12 +28,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     marginTop: 8,
-    height: 48, // Fixed height for consistency
+    height: 48,
   },
   genreButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 24, // More rounded corners
+    borderRadius: 24,
     backgroundColor: 'rgba(40, 40, 40, 0.8)', // Slightly transparent
     marginRight: 12,
     borderWidth: 1,

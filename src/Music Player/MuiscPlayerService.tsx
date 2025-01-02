@@ -1,4 +1,3 @@
-// services/musicPlayerService.tsx
 import React from 'react';
 import {useState} from 'react';
 import TrackPlayer, {
