@@ -21,6 +21,7 @@ export type RootStackParamList = {
   PublisherAuth:undefined;
   PublisherRegister:undefined;
   PublisherHomeScreen:undefined;
+  PlaylistDetails: { playlist: Playlist };
 };
 
 export type SplashScreenNavigationProp = NativeStackNavigationProp<
@@ -79,4 +80,19 @@ export interface UserType {
   country: string;
   subscriptionType: 'free' | 'premium';
   imageUrl: string | null; // Add this property
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  imageUrl: string;
+  totalSongs: number;
+  creator: string;
+}
+
+export interface ActionSheetOption {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  type?: 'danger';
 }

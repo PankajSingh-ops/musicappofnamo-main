@@ -180,7 +180,7 @@ const GlobalPlayer: React.FC<GlobalPlayerProps> = ({
               <Icon
                 name={isFavorited ? 'heart' : 'heart-outline'}
                 size={22}
-                color={isFavorited ? '#1DB954' : '#fff'}
+                color={isFavorited ? '#E9302F' : '#fff'}
               />
             </TouchableOpacity>
           </View>

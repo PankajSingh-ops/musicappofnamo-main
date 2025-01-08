@@ -22,6 +22,7 @@ import { MusicProvider } from './src/Music Player/MusicContext';
 import PublisherAuthScreen from './src/auth/PublisherAuthPage';
 import PublisherRegisterScreen from './src/auth/PublisherRegisterScreen';
 import PublisherHomeScreen from './src/Publisher/PublisherHomeScreen';
+import PlaylistDetails from './src/PlaylistDetails/PlaylistDetails';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -32,7 +33,7 @@ const App = () => {
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Splash"
-          screenOptions={{headerShown: true}}>
+          screenOptions={{headerShown:true}}>
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Music" component={MusicPlayer} />
@@ -56,6 +57,8 @@ const App = () => {
           <Stack.Screen name="ArtistMain" component={ArtistMainPage} />
           <Stack.Screen name="ArtistDetail" component={ArtistDetailPage} />
           <Stack.Screen name="UserProfile" component={UserProfile} />
+          <Stack.Screen name="PlaylistDetails" component={PlaylistDetails} />
+
         </Stack.Navigator>
       </NavigationContainer>
       </MusicProvider>

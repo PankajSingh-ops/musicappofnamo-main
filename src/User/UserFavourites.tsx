@@ -72,6 +72,32 @@ const FavoritesScreen: React.FC = () => {
     await playTrack(track, favorites);
   };
 
+  const handleAddToFavorites = async (track: Track) => {
+    if (!token) return;
+
+    try {
+      const response = await fetch('http://10.0.2.2:3000/api/favorites', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trackId: track.id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add to favorites');
+      }
+
+      // Update local state
+      setFavorites(prevFavorites => [...prevFavorites, track]);
+      Alert.alert('Success', 'Track added to favorites');
+    } catch (error) {
+      console.error('Error adding track:', error);
+      Alert.alert('Error', 'Failed to add track to favorites');
+    }
+  };
+
   const handleRemoveTrack = async (trackId: string) => {
     if (!token) return;
 
@@ -102,27 +128,12 @@ const FavoritesScreen: React.FC = () => {
   const handleToggleFavorite = async () => {
     if (!currentTrack || !token) return;
 
-    try {
-      const response = await fetch(`http://10.0.2.2:3000/api/favorites/${currentTrack.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const isCurrentlyFavorite = favorites.some(track => track.id === currentTrack.id);
 
-      if (!response.ok) {
-        throw new Error('Failed to remove from favorites');
-      }
-
-      // Update local state
-      setFavorites(prevFavorites => 
-        prevFavorites.filter(track => track.id !== currentTrack.id)
-      );
-
-      Alert.alert('Success', 'Track removed from favorites');
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      Alert.alert('Error', 'Failed to update favorites');
+    if (isCurrentlyFavorite) {
+      await handleRemoveTrack(currentTrack.id);
+    } else {
+      await handleAddToFavorites(currentTrack);
     }
   };
 
