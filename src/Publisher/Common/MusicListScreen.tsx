@@ -17,7 +17,6 @@ import {useAuth} from '../../../asyncStorage/AsyncStorage';
 import {useMusicPlayer} from '../../Music Player/MusicContext';
 import GlobalPlayer from '../../Music Player/GlobalPlayer';
 import styles from './Css/MuiscListScreenCss';
-import TrackOptionsMenu from '../../Music Player/TrackOptionsMenu';
 import TrackItem from '../../Music Player/TrackItem';
 
 const API_BASE_URL = 'http://10.0.2.2:3000';

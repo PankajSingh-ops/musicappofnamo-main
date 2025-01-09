@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     marginTop: 8,
-    height: 48,
+    height: 100,
   },
   genreButton: {
     paddingHorizontal: 20,
@@ -48,7 +48,9 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 80, // Ensure minimum width for better spacing
+    minWidth: 80,
+    minHeight:50,
+    maxHeight:80 // Ensure minimum width for better spacing
   },
   genreButtonActive: {
     backgroundColor: '#1DB954',

@@ -18,7 +18,7 @@ import { useAuth } from '../../asyncStorage/AsyncStorage';
 interface AddToPlaylistModalProps {
   visible: boolean;
   onClose: () => void;
-  trackId: number;
+  trackId: number|string;
 }
 
 interface Playlist {
