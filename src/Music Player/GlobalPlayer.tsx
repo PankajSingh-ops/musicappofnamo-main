@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -39,6 +39,65 @@ const GlobalPlayer: React.FC<GlobalPlayerProps> = ({
     useMusicPlayer();
   const [isFavorited, setIsFavorited] = useState(false);
   const {token} = useAuth();
+  const playTimeRef = useRef<number>(0);
+  const playCountTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Reset play time when track changes
+    playTimeRef.current = 0;
+    if (playCountTimer.current) {
+      clearTimeout(playCountTimer.current);
+      playCountTimer.current = null;
+    }
+  }, [currentTrack]);
+
+  useEffect(() => {
+    if (isPlaying && currentTrack) {
+      // Start counting play time
+      const timer = setInterval(() => {
+        playTimeRef.current += 1;
+
+        // Check if played for 30 seconds
+        if (playTimeRef.current === 30) {
+          updatePlayCount();
+          // Clear the interval since we only want to count once per play
+          clearInterval(timer);
+        }
+      }, 1000);
+
+      playCountTimer.current = timer;
+
+      return () => {
+        if (timer) clearInterval(timer);
+      };
+    } else {
+      // Clear timer when paused
+      if (playCountTimer.current) {
+        clearInterval(playCountTimer.current);
+        playCountTimer.current = null;
+      }
+    }
+  }, [isPlaying, currentTrack]);
+
+  const updatePlayCount = async () => {
+    if (!currentTrack || !token) return;
+
+    try {
+      const response = await fetch(
+        `http://10.0.2.2:3000/api/play-count/${currentTrack.id}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) throw new Error('Failed to update play count');
+    } catch (error) {
+      console.error('Error updating play count:', error);
+    }
+  };
 
   useEffect(() => {
     if (currentTrack && token) {

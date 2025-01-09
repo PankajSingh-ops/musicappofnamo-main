@@ -33,7 +33,7 @@ const App = () => {
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Splash"
-          screenOptions={{headerShown:true}}>
+          screenOptions={{headerShown:false}}>
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Music" component={MusicPlayer} />

@@ -6,6 +6,7 @@ import Header from '../common/HeaderUser';
 import userContent from './userContent.json';
 import FavoritesScreen from './UserFavourites';
 import PublisherPlaylist from '../Publisher/PublisherPlaylist';
+import PlaylistScreen from '../PlaylistDetails/PlayListScreen';
 
 // Recently Played Component
 const RecentlyPlayedList = () => (
@@ -115,7 +116,7 @@ const UserHomeScreen = () => {
         />
         <Tab.Screen
           name="Playlists"
-          component={PublisherPlaylist}
+          component={PlaylistScreen}
           options={{
             tabBarLabel: '',
           }}

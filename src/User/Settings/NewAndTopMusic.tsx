@@ -1,52 +1,32 @@
-import React from 'react';
-import {View, Text, StyleSheet, FlatList} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import GlobalPlayer from '../../Music Player/GlobalPlayer';
 import TrackItem from '../../Music Player/TrackItem';
 import {Track} from '../../../type';
 import {useMusicPlayer} from '../../Music Player/MusicContext';
 import MusicListScreen from '../../Publisher/Common/MusicListScreen';
-
-const newMusicData: Track[] = [
-  {
-    id: 'new1',
-    title: 'New Release 1',
-    artist: 'Artist 1',
-    url: require('../../../audio/lamhe.mp3'),
-    artwork:
-      'https://d1csarkz8obe9u.cloudfront.net/posterpreviews/pop-music-album-cover-design-template-%281%29-f3b873e61465d4524bb99bf02a56c649_screen.jpg?ts=1706311822',
-    duration: '3:50',
-  },
-];
-
-const topMusicData: Track[] = [
-  {
-    id: 'top1',
-    title: 'Top Hit 1',
-    artist: 'Artist 1',
-    url: require('../../../audio/hindi.mp3'),
-    artwork:
-      'https://img.freepik.com/free-vector/gradient-album-cover-template_23-2150597431.jpg',
-    duration: '5:00',
-  },
-  {
-    id: 'top2',
-    title: 'Top Hit 2',
-    artist: 'Artist 2',
-    url: require('../../../audio/faasle.mp3'),
-    artwork:
-      'https://img.freepik.com/free-vector/gradient-album-cover-template_23-2150597431.jpg',
-    duration: '5:00',
-  },
-  // Add more tracks as needed
-];
+import {useAuth} from '../../../asyncStorage/AsyncStorage';
+import axios from 'axios';
+import {useNavigation} from '@react-navigation/native';
 
 interface MusicScreenProps {
   title: string;
-  musicData: Track[];
 }
 
-const MusicScreen: React.FC<MusicScreenProps> = ({title, musicData}) => {
+const MusicScreen: React.FC<MusicScreenProps> = ({title}) => {
+  const [topMusic, setTopMusic] = useState<Track[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
+
+  const {token} = useAuth();
   const {
     currentTrack,
     isPlaying,
@@ -56,8 +36,28 @@ const MusicScreen: React.FC<MusicScreenProps> = ({title, musicData}) => {
     skipToPrevious,
   } = useMusicPlayer();
 
+  useEffect(() => {
+    fetchTopMusic();
+  }, []);
+
+  const fetchTopMusic = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('http://10.0.2.2:3000/api/top-music', {
+        headers: {
+          Authorization: `Bearer ${token}`, // Assume token is available from context/props
+        },
+      });
+      setTopMusic(response.data);
+    } catch (error) {
+      console.error('Error fetching top music:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePlayTrack = async (track: Track) => {
-    await playTrack(track, musicData);
+    await playTrack(track, topMusic);
   };
 
   const handleToggleFavorite = () => {
@@ -79,14 +79,27 @@ const MusicScreen: React.FC<MusicScreenProps> = ({title, musicData}) => {
     );
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screenContainer}>
       <View style={styles.headerContainer}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}>
+          <Icon name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
         <Text style={styles.screenTitle}>{title}</Text>
       </View>
       <FlatList
-        data={musicData}
-        keyExtractor={item => item.id}
+        data={topMusic}
+        keyExtractor={item => item.id.toString()}
         renderItem={renderTrackItem}
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
@@ -103,8 +116,7 @@ const MusicScreen: React.FC<MusicScreenProps> = ({title, musicData}) => {
           onNext={skipToNext}
           onPrevious={skipToPrevious}
           onToggleFavorite={handleToggleFavorite}
-          onClose={() => {
-          }}
+          onClose={() => {}}
         />
       )}
     </View>
@@ -115,44 +127,61 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     backgroundColor: '#121212',
-    padding: 15,
+    paddingBottom: 30,
   },
+
   headerContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+  },
+  backButton: {
+    marginRight: 15,
+    padding: 5,
   },
   screenTitle: {
-    color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#ffffff',
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#121212',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyContainer: {
-    alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
-    marginTop: 100,
+    alignItems: 'center',
+    paddingTop: 100,
   },
   emptyText: {
     color: '#888',
-    marginTop: 20,
-    fontSize: 18,
+    fontSize: 16,
+    marginTop: 10,
   },
   trackText: {
-    color: '#fff',
+    color: '#ffffff',
+    fontSize: 16,
   },
   playingTrackText: {
-    color: '#1DB954', // Spotify-like green color for playing track
+    color: '#1DB954', // Spotify-like green color
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
 
 export const NewMusic: React.FC = () => {
-  return <MusicListScreen/>;
+  return <MusicListScreen />;
 };
 
 export const TopMusic: React.FC = () => {
-  return <MusicScreen title="Top Music" musicData={topMusicData} />;
+  return <MusicScreen title="Top Music" />;
 };
 
 export default MusicScreen;

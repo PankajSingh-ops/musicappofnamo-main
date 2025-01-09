@@ -6,8 +6,8 @@ import Header from '../common/HeaderUser';
 import HomeScreen from './HomeScreen';
 import FavoritesScreen from '../User/UserFavourites';
 import AddMusic from './AddMusic';
-import PublisherPlaylist from './PublisherPlaylist';
 import AnalyticsScreen from './AnalyticsScreen';
+import PlaylistScreen from '../PlaylistDetails/PlayListScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -91,7 +91,7 @@ const PublisherHomeScreen = () => {
         />
         <Tab.Screen
           name="Playlists"
-          component={PublisherPlaylist}
+          component={PlaylistScreen}
           options={{tabBarLabel: ''}}
         />
         <Tab.Screen

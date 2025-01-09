@@ -25,11 +25,6 @@ const HomeScreen = ({navigation}:any) => {
         with CallerTunes on Indian Mobile Network and earn revenue
       </Text>
       <View style={styles.buttonContainer}>
-      <TouchableOpacity
-          style={styles.buttonWrapper}
-          onPress={() => navigation.navigate('Music')}>
-          <Text style={styles.button}>Music</Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={styles.buttonWrapper}
           onPress={() => navigation.navigate('PublisherAuth', { role: 'publisher' })}>

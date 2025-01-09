@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   playButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1DB954',
+    backgroundColor: 'red',
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 24,
