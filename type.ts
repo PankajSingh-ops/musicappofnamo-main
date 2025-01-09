@@ -7,21 +7,21 @@ export type RootStackParamList = {
   Auth: undefined;
   Register: undefined;
   SignIn: undefined;
-  ForgetPassword:undefined;
-  VerifyOTP:{ email?: string };
-  ResetPassword:{ email?: string };
-  Userhome:undefined;
-  GenreDetails:undefined;
-  Genre:undefined;
-  NewReleases:undefined;
-  TopMusic:undefined;
-  ArtistDetail:undefined;
-  ArtistMain:undefined;
-  UserProfile:undefined;
-  PublisherAuth:undefined;
-  PublisherRegister:undefined;
-  PublisherHomeScreen:undefined;
-  PlaylistDetails: { playlist: Playlist };
+  ForgetPassword: undefined;
+  VerifyOTP: {email?: string};
+  ResetPassword: {email?: string};
+  Userhome: undefined;
+  GenreDetails: undefined;
+  Genre: undefined;
+  NewReleases: undefined;
+  TopMusic: undefined;
+  ArtistDetail: undefined;
+  ArtistMain: undefined;
+  UserProfile: undefined;
+  PublisherAuth: undefined;
+  PublisherRegister: undefined;
+  PublisherHomeScreen: undefined;
+  PlaylistDetails: {playlist: Playlist};
 };
 
 export type SplashScreenNavigationProp = NativeStackNavigationProp<
@@ -69,7 +69,7 @@ export interface UserType {
   id: string;
   name: string;
   full_name: string;
-  email:string;
+  email: string;
   username: string;
   followers: number;
   following: number;

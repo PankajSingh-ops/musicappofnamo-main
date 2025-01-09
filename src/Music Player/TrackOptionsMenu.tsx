@@ -12,6 +12,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Track } from '../../type';
 import { useAuth } from '../../asyncStorage/AsyncStorage';
+import AddToPlaylistModal from '../PlaylistDetails/AddToPlaylist';
 
 interface TrackOptionsMenuProps {
   visible: boolean;
@@ -26,6 +27,8 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
 }) => {
   const { user, token } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+
 
   const checkFavoriteStatus = useCallback(async () => {
     if (!user || !token) return;
@@ -97,8 +100,7 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
       icon: 'add-circle-outline',
       label: 'Add to Playlist',
       onPress: () => {
-        // Handle add to playlist
-        onClose();
+        setShowPlaylistModal(true);
       },
     },
     {
@@ -134,6 +136,7 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
   }, [visible, user, checkFavoriteStatus]);
 
   return (
+    <>
     <Modal
       visible={visible}
       transparent
@@ -162,6 +165,15 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
         </View>
       </TouchableOpacity>
     </Modal>
+    <AddToPlaylistModal
+        visible={showPlaylistModal}
+        onClose={() => {
+          setShowPlaylistModal(false);
+          onClose();
+        }}
+        trackId={track.id}
+      />
+    </>
   );
 };
 

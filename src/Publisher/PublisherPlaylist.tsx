@@ -1,6 +1,5 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
-  StyleSheet,
   Text,
   View,
   Image,
@@ -11,10 +10,17 @@ import {
   FlatList,
   StatusBar,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {useNavigation} from '@react-navigation/native';
 import {ActionSheetOption, Playlist} from '../../type';
+import * as ImagePicker from 'react-native-image-picker';
+import styles from './Css/PublisherPlaylistCss';
+import {useAuth} from '../../asyncStorage/AsyncStorage';
 
 interface UserProfile {
   name: string;
@@ -23,17 +29,22 @@ interface UserProfile {
   followers: number;
 }
 
+const API_URL = 'http://10.0.2.2:3000/api';
+
 const PublisherPlaylist = () => {
   const navigation = useNavigation();
+  const {token} = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(
     null,
   );
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Sample user data
   const [userProfile] = useState<UserProfile>({
     name: 'Sarah Wilson',
     imageUrl:
@@ -42,75 +53,203 @@ const PublisherPlaylist = () => {
     followers: 2453,
   });
 
-  // Sample playlists data
-  const [playlists, setPlaylists] = useState<Playlist[]>([
-    {
-      id: '1',
-      name: 'My Favorite Hits',
-      imageUrl:
-        'https://i.pinimg.com/736x/cd/6c/8f/cd6c8f834fce26428e62a46d2c27357b.jpg',
-      totalSongs: 45,
-      creator: 'Sarah Wilson',
-    },
-    {
-      id: '2',
-      name: 'Workout Mix',
-      imageUrl:
-        'https://i.pinimg.com/736x/cd/6c/8f/cd6c8f834fce26428e62a46d2c27357b.jpg',
-      totalSongs: 32,
-      creator: 'Sarah Wilson',
-    },
-    {
-      id: '3',
-      name: 'Chill Vibes',
-      imageUrl:
-        'https://i.pinimg.com/736x/cd/6c/8f/cd6c8f834fce26428e62a46d2c27357b.jpg',
-      totalSongs: 28,
-      creator: 'Sarah Wilson',
-    },
-  ]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
-  const showActionSheet = (playlist: Playlist) => {
-    setSelectedPlaylist(playlist);
-    setActionSheetVisible(true);
+  useEffect(() => {
+    fetchPlaylists();
+  }, []);
+
+  const fetchPlaylists = async () => {
+    try {
+      const response = await fetch(`${API_URL}/playlists`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch playlists');
+      const data = await response.json();
+      console.log(data, 'playlistData');
+
+      setPlaylists(data);
+    } catch (error) {
+      console.error('Error fetching playlists:', error);
+      Alert.alert('Error', 'Failed to load playlists');
+    }
   };
 
-  const hideActionSheet = () => {
-    setActionSheetVisible(false);
-    setSelectedPlaylist(null);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchPlaylists();
+    setRefreshing(false);
   };
 
-  const createNewPlaylist = () => {
-    if (newPlaylistName.trim()) {
-      const newPlaylist: Playlist = {
-        id: Date.now().toString(),
-        name: newPlaylistName,
-        imageUrl: 'https://example.com/placeholder.jpg',
-        totalSongs: 0,
-        creator: userProfile.name,
-      };
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibrary({
+        mediaType: 'photo',
+        quality: 1,
+      });
 
-      setPlaylists([...playlists, newPlaylist]);
-      setNewPlaylistName('');
+      if (result.assets && result.assets[0]?.uri) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const createNewPlaylist = async () => {
+    if (!newPlaylistName.trim()) {
+      Alert.alert('Error', 'Please enter a playlist name');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let imageUrl = null;
+      if (selectedImage) {
+        // Create form data for image upload
+        const imageFormData = new FormData();
+        imageFormData.append('file', {
+          uri: selectedImage,
+          type: 'image/jpeg',
+          name: 'playlist-cover.jpg',
+        });
+
+        // Upload image first
+        const imageResponse = await fetch(`${API_URL}/playlists/upload/image`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+            'Content-Type': 'multipart/form-data',
+          },
+          body: imageFormData,
+        });
+
+        if (!imageResponse.ok) {
+          const errorData = await imageResponse.json();
+          throw new Error(errorData.error || 'Failed to upload image');
+        }
+
+        const imageData = await imageResponse.json();
+        if (!imageData.url) {
+          throw new Error('No image URL received from server');
+        }
+        imageUrl = imageData.url;
+
+        // Verify image URL is accessible
+        const imageCheck = await fetch(imageUrl);
+        if (!imageCheck.ok) {
+          throw new Error('Uploaded image URL is not accessible');
+        }
+      }
+
+      const playlistResponse = await fetch(`${API_URL}/playlists`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newPlaylistName,
+          imageUrl,
+        }),
+      });
+
+      if (!playlistResponse.ok) {
+        const errorData = await playlistResponse.json();
+        throw new Error(errorData.error || 'Failed to create playlist');
+      }
+
+      const newPlaylist = await playlistResponse.json();
+      setPlaylists(prevPlaylists => [...prevPlaylists, newPlaylist]);
+      resetForm();
       setModalVisible(false);
-    }
-  };
-
-  const editPlaylist = () => {
-    if (selectedPlaylist && newPlaylistName.trim()) {
-      const updatedPlaylists = playlists.map(playlist =>
-        playlist.id === selectedPlaylist.id
-          ? {...playlist, name: newPlaylistName}
-          : playlist,
+    } catch (error) {
+      console.error('Error creating playlist:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to create playlist. Please try again.',
       );
-      setPlaylists(updatedPlaylists);
-      setEditModalVisible(false);
-      setNewPlaylistName('');
-      setSelectedPlaylist(null);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const deletePlaylist = (playlist: Playlist) => {
+  const editPlaylist = async () => {
+    if (!selectedPlaylist || !newPlaylistName.trim()) return;
+
+    setLoading(true);
+    try {
+      let imageUrl = selectedPlaylist.imageUrl;
+      if (selectedImage && selectedImage !== selectedPlaylist.imageUrl) {
+        const imageFormData = new FormData();
+        imageFormData.append('file', {
+          uri: selectedImage,
+          type: 'image/jpeg',
+          name: 'playlist-cover.jpg',
+        });
+
+        const imageResponse = await fetch(`${API_URL}/playlists/upload/image`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+          body: imageFormData,
+        });
+
+        if (!imageResponse.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const imageData = await imageResponse.json();
+        imageUrl = imageData.url;
+      }
+
+      const response = await fetch(
+        `${API_URL}/playlists/${selectedPlaylist.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: newPlaylistName,
+            imageUrl,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update playlist');
+      }
+
+      const updatedPlaylist = await response.json();
+      setPlaylists(prevPlaylists =>
+        prevPlaylists.map(playlist =>
+          playlist.id === selectedPlaylist.id ? updatedPlaylist : playlist,
+        ),
+      );
+      resetForm();
+      setEditModalVisible(false);
+    } catch (error) {
+      console.error('Error updating playlist:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to update playlist. Please try again.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePlaylist = async (playlist: Playlist) => {
     Alert.alert(
       'Delete Playlist',
       `Are you sure you want to delete "${playlist.name}"?`,
@@ -122,21 +261,161 @@ const PublisherPlaylist = () => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            const updatedPlaylists = playlists.filter(
-              p => p.id !== playlist.id,
-            );
-            setPlaylists(updatedPlaylists);
+          onPress: async () => {
+            try {
+              const response = await fetch(
+                `${API_URL}/playlists/${playlist.id}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                },
+              );
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete playlist');
+              }
+
+              setPlaylists(prevPlaylists =>
+                prevPlaylists.filter(p => p.id !== playlist.id),
+              );
+            } catch (error) {
+              console.error('Error deleting playlist:', error);
+              Alert.alert(
+                'Error',
+                error.message || 'Failed to delete playlist. Please try again.',
+              );
+            }
           },
         },
       ],
     );
   };
 
+  const resetForm = () => {
+    setNewPlaylistName('');
+    setSelectedImage(null);
+    setSelectedPlaylist(null);
+  };
+
   const handlePlaylistPress = (playlist: Playlist) => {
     navigation.navigate('PlaylistDetails', {playlist});
   };
 
+  const showActionSheet = (playlist: Playlist) => {
+    setSelectedPlaylist(playlist);
+    setActionSheetVisible(true);
+  };
+
+  const hideActionSheet = () => {
+    setActionSheetVisible(false);
+    setSelectedPlaylist(null);
+  };
+
+  const PlaylistModal = ({
+    visible,
+    onClose,
+    onSubmit,
+    title,
+    submitText,
+  }: {
+    visible: boolean;
+    onClose: () => void;
+    onSubmit: () => Promise<void>;
+    title: string;
+    submitText: string;
+  }) => {
+    return (
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={onClose}>
+        <TouchableWithoutFeedback>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContainer}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>{title}</Text>
+                    <TouchableOpacity
+                      style={styles.modalCloseButton}
+                      onPress={onClose}>
+                      <Icon name="close" size={24} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.imagePickerContainer}
+                    onPress={pickImage}>
+                    {selectedImage ? (
+                      <Image
+                        source={{uri: selectedImage}}
+                        style={styles.selectedImage}
+                        resizeMode="cover"
+                        onError={() => {
+                          Alert.alert('Error', 'Failed to load image');
+                          setSelectedImage(null);
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <Icon
+                          name="add-photo-alternate"
+                          size={40}
+                          color="#666"
+                        />
+                        <Text style={styles.imagePickerText}>
+                          Add Cover Image
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Playlist name"
+                    value={newPlaylistName}
+                    onChangeText={setNewPlaylistName}
+                    placeholderTextColor="#666"
+                    returnKeyType="done"
+                    autoCapitalize="none"
+                    blurOnSubmit={false}
+                    onFocus={() => setModalVisible(true)}
+                  />
+
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                      style={[styles.modalButton, styles.cancelButton]}
+                      onPress={onClose}
+                      disabled={loading}>
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalButton, styles.createButton]}
+                      onPress={onSubmit}
+                      disabled={loading}>
+                      {loading ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Text style={styles.createButtonText}>
+                          {submitText}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
   const ActionSheet = () => {
     if (!selectedPlaylist) return null;
 
@@ -146,6 +425,7 @@ const PublisherPlaylist = () => {
         label: 'Edit Playlist',
         onPress: () => {
           setNewPlaylistName(selectedPlaylist.name);
+          setSelectedImage(selectedPlaylist.imageUrl);
           setEditModalVisible(true);
           hideActionSheet();
         },
@@ -261,7 +541,7 @@ const PublisherPlaylist = () => {
       <View style={styles.playlistInfo}>
         <Text style={styles.playlistName}>{item.name}</Text>
         <Text style={styles.playlistDetails}>
-          {item.totalSongs} songs - {item.creator}
+          {item.totalSongs} songs • {item.creator}
         </Text>
       </View>
       <TouchableOpacity
@@ -282,314 +562,36 @@ const PublisherPlaylist = () => {
         contentContainerStyle={styles.playlistsContainer}
         ListHeaderComponent={HeaderComponent}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        keyboardShouldPersistTaps="handled"
       />
 
-      {/* Create Playlist Modal */}
-      <Modal
+      <PlaylistModal
         visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Create New Playlist</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Playlist name"
-              value={newPlaylistName}
-              onChangeText={setNewPlaylistName}
-              placeholderTextColor="#666"
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.createButton]}
-                onPress={createNewPlaylist}>
-                <Text style={styles.buttonText}>Create</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => {
+          setModalVisible(false);
+          resetForm();
+        }}
+        onSubmit={createNewPlaylist}
+        title="Create New Playlist"
+        submitText="Create"
+      />
 
-      {/* Edit Playlist Modal */}
-      <Modal
+      <PlaylistModal
         visible={editModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Playlist</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Playlist name"
-              value={newPlaylistName}
-              onChangeText={setNewPlaylistName}
-              placeholderTextColor="#666"
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setEditModalVisible(false)}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.createButton]}
-                onPress={editPlaylist}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => {
+          setEditModalVisible(false);
+          resetForm();
+        }}
+        onSubmit={editPlaylist}
+        title="Edit Playlist"
+        submitText="Save"
+      />
 
       <ActionSheet />
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
-  menuOptions: {
-    position: 'absolute',
-    right: 48,
-    top: 16,
-    backgroundColor: '#333',
-    borderRadius: 8,
-    elevation: 5,
-    padding: 8,
-  },
-  actionSheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  actionSheetContainer: {
-    backgroundColor: '#282828',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 34, // Add extra padding for iPhone home indicator
-  },
-  actionSheetHeader: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#383838',
-  },
-  actionSheetTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  actionSheetSubtitle: {
-    fontSize: 14,
-    color: '#b3b3b3',
-  },
-  actionSheetOptions: {
-    paddingVertical: 8,
-  },
-  actionSheetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  actionSheetOptionText: {
-    fontSize: 16,
-    color: '#fff',
-    marginLeft: 16,
-  },
-  actionSheetOptionDanger: {
-    color: '#E72F2E',
-  },
-  actionSheetCancelButton: {
-    marginTop: 8,
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#383838',
-  },
-  actionSheetCancelText: {
-    fontSize: 16,
-    color: '#b3b3b3',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  menuOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-  },
-  menuText: {
-    color: '#fff',
-    marginLeft: 8,
-    fontSize: 16,
-  },
-  headerContainer: {
-    backgroundColor: '#1a1a1a',
-    paddingBottom: 16,
-  },
-  backButton: {
-    padding: 16,
-  },
-  profileSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: 16,
-    borderWidth: 3,
-    borderColor: '#E72F2E',
-  },
-  profileName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 16,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#282828',
-    padding: 16,
-    borderRadius: 20,
-    width: '80%',
-  },
-  stat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#b3b3b3',
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#404040',
-  },
-  playlistHeaderSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E72F2E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-  },
-  playlistsContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  playlistCard: {
-    flexDirection: 'row',
-    backgroundColor: '#282828',
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
-    elevation: 3,
-    alignItems: 'center',
-  },
-  playlistImage: {
-    width: 80,
-    height: 80,
-  },
-  playlistInfo: {
-    flex: 1,
-    padding: 16,
-  },
-  playlistName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  playlistDetails: {
-    fontSize: 14,
-    color: '#b3b3b3',
-  },
-  moreButton: {
-    padding: 16,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: '#282828',
-    borderRadius: 16,
-    padding: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    backgroundColor: '#3a3a3a',
-    borderRadius: 8,
-    padding: 16,
-    color: '#fff',
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 8,
-    marginHorizontal: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#404040',
-  },
-  createButton: {
-    backgroundColor: '#E72F2E',
-  },
-  buttonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});
 
 export default PublisherPlaylist;

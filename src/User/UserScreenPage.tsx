@@ -4,8 +4,8 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Header from '../common/HeaderUser';
 import userContent from './userContent.json';
-import PlaylistScreen from './UserPlaylis';
 import FavoritesScreen from './UserFavourites';
+import PublisherPlaylist from '../Publisher/PublisherPlaylist';
 
 // Recently Played Component
 const RecentlyPlayedList = () => (
@@ -115,7 +115,7 @@ const UserHomeScreen = () => {
         />
         <Tab.Screen
           name="Playlists"
-          component={PlaylistScreen}
+          component={PublisherPlaylist}
           options={{
             tabBarLabel: '',
           }}
