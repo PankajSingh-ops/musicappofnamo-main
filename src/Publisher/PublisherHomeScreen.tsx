@@ -5,9 +5,9 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import Header from '../common/HeaderUser';
 import HomeScreen from './HomeScreen';
 import FavoritesScreen from '../User/UserFavourites';
-import AddMusic from './AddMusic';
 import AnalyticsScreen from './AnalyticsScreen';
 import PlaylistScreen from '../PlaylistDetails/PlayListScreen';
+import AddMusicAndAlbum from './Common/AddMusicAndAlbum';
 
 const Tab = createBottomTabNavigator();
 
@@ -86,7 +86,7 @@ const PublisherHomeScreen = () => {
         />
         <Tab.Screen
           name="Add"
-          component={AddMusic}
+          component={AddMusicAndAlbum}
           options={{tabBarLabel: ''}}
         />
         <Tab.Screen

@@ -16,6 +16,7 @@ import MusicListScreen from '../../Publisher/Common/MusicListScreen';
 import {useAuth} from '../../../asyncStorage/AsyncStorage';
 import axios from 'axios';
 import {useNavigation} from '@react-navigation/native';
+import CreateAlbumScreen from '../../Album/AddAlbumSongs';
 
 interface MusicScreenProps {
   title: string;
@@ -183,5 +184,9 @@ export const NewMusic: React.FC = () => {
 export const TopMusic: React.FC = () => {
   return <MusicScreen title="Top Music" />;
 };
+
+export const AddAlbum:React.FC=()=>{
+  return <CreateAlbumScreen />
+}
 
 export default MusicScreen;

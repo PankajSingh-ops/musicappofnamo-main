@@ -22,6 +22,11 @@ export type RootStackParamList = {
   PublisherRegister: undefined;
   PublisherHomeScreen: undefined;
   PlaylistDetails: {playlist: Playlist};
+  AddAlbums: undefined;
+  AddMusicAndAlbum: undefined;
+  AddMusic: undefined;
+  Albums: undefined;
+  AlbumDetail: {album: Album};
 };
 
 export type SplashScreenNavigationProp = NativeStackNavigationProp<
@@ -95,4 +100,14 @@ export interface ActionSheetOption {
   label: string;
   onPress: () => void;
   type?: 'danger';
+}
+
+export interface Album {
+  id: string;
+  name: string;
+  artist: string;
+  cover_image: string;
+  genre: string;
+  release_date: string;
+  songs: Track[];
 }
