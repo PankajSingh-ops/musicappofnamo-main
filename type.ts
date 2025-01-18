@@ -27,6 +27,8 @@ export type RootStackParamList = {
   AddMusic: undefined;
   Albums: undefined;
   AlbumDetail: {album: Album};
+  Search:undefined;
+  AddEventsScreen:undefined;
 };
 
 export type SplashScreenNavigationProp = NativeStackNavigationProp<
@@ -110,4 +112,40 @@ export interface Album {
   genre: string;
   release_date: string;
   songs: Track[];
+}
+
+export interface Profile {
+  full_name: string;
+  email: string;
+  bio: string;
+  phone_number: string;
+  country: string;
+  gender: string;
+  date_of_birth: string;
+  image_url: string;
+  followers: number;
+  following: number;
+}
+
+export interface ImageAsset {
+  uri: string;
+  type?: string;
+  fileName?: string;
+}
+
+export interface Event {
+  event_title: string;
+  event_cover: string;
+  event_location: 'online' | 'physical';
+  location_url: string;
+  start_date: Date;
+  start_time: Date;
+  end_date: Date;
+  end_time: Date;
+  timezone: string;
+  sell_tickets: boolean;
+  total_tickets?: number;
+  ticket_price?: number;
+  event_description: string;
+  event_video: string;
 }

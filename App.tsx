@@ -28,6 +28,7 @@ import AlbumList from './src/Album/AlbumList';
 import AlbumDetail from './src/Album/AlbumDetails';
 import ArtistMainPage from './src/Artist/ArtistMainPage';
 import ArtistDetailPage from './src/Artist/ArtistDetailsPage';
+import AddEventScreen from './src/Events/AddEventsScreen/AddEventsScree';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -68,6 +69,8 @@ const App = () => {
           <Stack.Screen name="AddMusic" component={AddMusic} />
           <Stack.Screen name="Albums" component={AlbumList} />
           <Stack.Screen name="AlbumDetail" component={AlbumDetail} />
+          <Stack.Screen name="AddEventsScreen" component={AddEventScreen} />
+
 
 
 

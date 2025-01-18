@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -64,6 +65,7 @@ const AddMusicAndAlbum = ({ navigation }:any) => {
   );
 
   return (
+    <ScrollView>
     <View style={styles.container}>
       <Text style={styles.header}>Music Manager</Text>
       <View style={styles.boxContainer}>
@@ -79,6 +81,14 @@ const AddMusicAndAlbum = ({ navigation }:any) => {
           color="#8E44AD"
           onPress={() => navigation.navigate('AddAlbums')}
         />
+       <BoxComponent
+  title="Add Event"
+  icon="calendar-plus" // Use an appropriate icon for adding events
+  color="#3A7DFF" // Blue color for events
+  onPress={() => navigation.navigate('AddEventsScreen')}
+/>
+
+
       </View>
       <View style={styles.statsContainer}>
         <View style={styles.statBox}>
@@ -93,6 +103,7 @@ const AddMusicAndAlbum = ({ navigation }:any) => {
         </View>
       </View>
     </View>
+    </ScrollView>
   );
 };
 
@@ -113,10 +124,12 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   boxContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    flexDirection: 'row', // Stack items vertically
+    justifyContent: 'space-between', // Distribute spacing between items
+    alignItems: 'center', // Center items horizontally
     marginTop: 20,
+    gap: 16, // Add spacing between components (React Native >= 0.71)
+    flexWrap:'wrap'
   },
   box: {
     borderRadius: 20,

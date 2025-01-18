@@ -1,11 +1,10 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
   Animated,
-  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {Track} from '../../type';
@@ -13,6 +12,7 @@ import ExpandedPlayer from './ExpandedTrack';
 import styles from './Css/GlobalPlayerCss';
 import {useMusicPlayer} from './MusicContext';
 import {useAuth} from '../../asyncStorage/AsyncStorage';
+import { useGlobalPlayerStore } from '../../store/useGlobalStore';
 
 interface GlobalPlayerProps {
   currentTrack: Track | null;
@@ -33,133 +33,56 @@ const GlobalPlayer: React.FC<GlobalPlayerProps> = ({
   onPrevious,
   onToggleFavorite,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [animation] = useState(new Animated.Value(0));
-  const {isShuffled, repeatMode, toggleShuffle, toggleRepeat} =
-    useMusicPlayer();
-  const [isFavorited, setIsFavorited] = useState(false);
+  const {isShuffled, repeatMode, toggleShuffle, toggleRepeat} = useMusicPlayer();
   const {token} = useAuth();
-  const playTimeRef = useRef<number>(0);
-  const playCountTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  const {
+    isExpanded,
+    isFavorited,
+    setIsExpanded,
+    resetPlayTime,
+    clearPlayCountTimer,
+    checkFavoriteStatus,
+    handleToggleFavorite,
+    updatePlayCount,
+    setPlayCountTimer,
+    setPlayTime,
+  } = useGlobalPlayerStore();
 
   useEffect(() => {
-    // Reset play time when track changes
-    playTimeRef.current = 0;
-    if (playCountTimer.current) {
-      clearTimeout(playCountTimer.current);
-      playCountTimer.current = null;
-    }
+    resetPlayTime();
   }, [currentTrack]);
 
   useEffect(() => {
     if (isPlaying && currentTrack) {
-      // Start counting play time
       const timer = setInterval(() => {
-        playTimeRef.current += 1;
-
-        // Check if played for 30 seconds
-        if (playTimeRef.current === 30) {
-          updatePlayCount();
-          // Clear the interval since we only want to count once per play
-          clearInterval(timer);
-        }
+        setPlayTime((prev) => {
+          const newTime = prev + 1;
+          if (newTime === 30) {
+            updatePlayCount(currentTrack, token);
+            clearInterval(timer);
+          }
+          return newTime;
+        });
       }, 1000);
 
-      playCountTimer.current = timer;
+      setPlayCountTimer(timer);
 
       return () => {
-        if (timer) clearInterval(timer);
+        clearInterval(timer);
+        clearPlayCountTimer();
       };
     } else {
-      // Clear timer when paused
-      if (playCountTimer.current) {
-        clearInterval(playCountTimer.current);
-        playCountTimer.current = null;
-      }
+      clearPlayCountTimer();
     }
   }, [isPlaying, currentTrack]);
 
-  const updatePlayCount = async () => {
-    if (!currentTrack || !token) return;
-
-    try {
-      const response = await fetch(
-        `http://10.0.2.2:3000/api/play-count/${currentTrack.id}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) throw new Error('Failed to update play count');
-    } catch (error) {
-      console.error('Error updating play count:', error);
-    }
-  };
-
   useEffect(() => {
     if (currentTrack && token) {
-      checkFavoriteStatus();
+      checkFavoriteStatus(currentTrack, token);
     }
   }, [currentTrack, token]);
-
-  const checkFavoriteStatus = async () => {
-    if (!currentTrack || !token) return;
-
-    try {
-      const response = await fetch(
-        `http://10.0.2.2:3000/api/favorites/check/${currentTrack.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) throw new Error('Failed to check favorite status');
-
-      const data = await response.json();
-      setIsFavorited(data.isFavorited);
-    } catch (error) {
-      console.error('Error checking favorite status:', error);
-    }
-  };
-
-  const handleToggleFavorite = async () => {
-    if (!currentTrack || !token) {
-      Alert.alert('Error', 'Please log in to add favorites');
-      return;
-    }
-
-    try {
-      const method = isFavorited ? 'DELETE' : 'POST';
-      const url = isFavorited
-        ? `http://10.0.2.2:3000/api/favorites/${currentTrack.id}`
-        : 'http://10.0.2.2:3000/api/favorites';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body:
-          method === 'POST'
-            ? JSON.stringify({musicId: currentTrack.id})
-            : undefined,
-      });
-
-      if (!response.ok) throw new Error('Failed to update favorite');
-
-      setIsFavorited(!isFavorited);
-      onToggleFavorite(); // Notify parent component
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      Alert.alert('Error', 'Failed to update favorite status');
-    }
-  };
 
   if (!currentTrack) return null;
 
@@ -233,7 +156,7 @@ const GlobalPlayer: React.FC<GlobalPlayerProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleToggleFavorite}
+              onPress={() => handleToggleFavorite(currentTrack, token, onToggleFavorite)}
               style={[styles.controlButton, styles.favoriteButton]}
               hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Icon
@@ -254,7 +177,7 @@ const GlobalPlayer: React.FC<GlobalPlayerProps> = ({
         onPlayPause={onPlayPause}
         onNext={onNext}
         onPrevious={onPrevious}
-        onToggleSave={handleToggleFavorite}
+        onToggleSave={() => handleToggleFavorite(currentTrack, token, onToggleFavorite)}
         onToggleShuffle={toggleShuffle}
         onToggleRepeat={toggleRepeat}
         isSaved={isFavorited}

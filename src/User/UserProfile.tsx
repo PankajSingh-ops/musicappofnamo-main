@@ -1,4 +1,5 @@
-import React, {useState, useEffect} from 'react';
+// src/screens/ProfileScreen.tsx
+import React from 'react';
 import {
   View,
   Text,
@@ -11,41 +12,66 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import * as ImagePicker from 'react-native-image-picker';
-import {Picker} from '@react-native-picker/picker';
-import {countries} from '../../data/countries/Countries';
-import {useAuth} from '../../asyncStorage/AsyncStorage';
+import { Picker } from '@react-native-picker/picker';
+import { countries } from '../../data/countries/Countries';
 import DatePicker from '@react-native-community/datetimepicker';
 import styles from './CSS/Userprofile';
+import useProfileStore from '../../store/userProfileStore';
+import { useAuth } from '../../asyncStorage/AsyncStorage';
 
 const ProfileScreen = () => {
-  const {token} = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [profile, setProfile] = useState({
-    full_name: '',
-    email: '',
-    bio: '',
-    phone_number: '',
-    country: '',
-    gender: '',
-    date_of_birth: '',
-    image_url: '',
-    followers: 0,
-    following: 0,
-  });
+  const { token } = useAuth();
+  const {
+    profile,
+    isLoading,
+    isEditing,
+    showDatePicker,
+    setIsEditing,
+    setShowDatePicker,
+    updateField,
+    fetchProfile,
+    updateProfile,
+    uploadProfileImage,
+  } = useProfileStore();
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
+  React.useEffect(() => {
+    if (token) {
+      fetchProfile(token);
+    }
+  }, [token]);
 
-  const handleDateChange = (event, selectedDate) => {
+  const handleDateChange = (_: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       const formattedDate = selectedDate.toISOString().split('T')[0];
-      setProfile(prev => ({...prev, date_of_birth: formattedDate}));
+      updateField('date_of_birth', formattedDate);
     }
   };
+
+  const handleImagePicker = () => {
+    const options: ImagePicker.ImageLibraryOptions = {
+      mediaType: 'photo',
+      maxWidth: 1000,
+      maxHeight: 1000,
+      quality: 0.8,
+    };
+
+    ImagePicker.launchImageLibrary(options, (response) => {
+      if (response.didCancel || response.errorCode || !response.assets?.[0]) {
+        return;
+      }
+
+      const selectedImage = response.assets[0];
+      if (!selectedImage.uri || !token) return;
+
+      uploadProfileImage(token, {
+        uri: selectedImage.uri,
+        type: selectedImage.type,
+        fileName: selectedImage.fileName,
+      });
+    });
+  };
+
   const renderDateOfBirthField = () => (
     <>
       <Text style={styles.label}>Date of Birth</Text>
@@ -59,11 +85,7 @@ const ProfileScreen = () => {
 
       {showDatePicker && (
         <DatePicker
-          value={
-            profile.date_of_birth
-              ? new Date(profile.date_of_birth)
-              : new Date()
-          }
+          value={profile.date_of_birth ? new Date(profile.date_of_birth) : new Date()}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={handleDateChange}
@@ -73,88 +95,6 @@ const ProfileScreen = () => {
       )}
     </>
   );
-
-
-  const fetchProfile = async () => {
-    try {
-      const response = await fetch('http://10.0.2.2:3000/api/user/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  };
-
-  const handleImagePicker = () => {
-    const options = {
-      mediaType: 'photo',
-      maxWidth: 1000,
-      maxHeight: 1000,
-      quality: 0.8,
-    };
-
-    ImagePicker.launchImageLibrary(options, async response => {
-      if (response.didCancel || response.errorCode || !response.assets) {
-        return;
-      }
-
-      const selectedImage = response.assets[0];
-      if (!selectedImage.uri) return;
-
-      setLoading(true);
-      try {
-        const formData = new FormData();
-        formData.append('file', {
-          uri: selectedImage.uri,
-          type: selectedImage.type,
-          name: selectedImage.fileName || 'image.jpg',
-        });
-
-        const uploadResponse = await fetch(
-          'http://10.0.2.2:3000/api/user/profile/upload/image',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'multipart/form-data',
-            },
-            body: formData,
-          },
-        );
-
-        const data = await uploadResponse.json();
-        setProfile(prev => ({...prev, imageUrl: data.url}));
-      } catch (error) {
-        console.error('Error uploading image:', error);
-      } finally {
-        setLoading(false);
-      }
-    });
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('http://10.0.2.2:3000/api/user/profile', {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(profile),
-      });
-      await response.json();
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <ScrollView style={styles.container}>
@@ -166,7 +106,7 @@ const ProfileScreen = () => {
             style={styles.imageWrapper}>
             {profile.image_url ? (
               <Image
-                source={{uri: profile.image_url}}
+                source={{ uri: profile.image_url }}
                 style={styles.profileImage}
               />
             ) : (
@@ -210,7 +150,7 @@ const ProfileScreen = () => {
             <TextInput
               style={styles.bioInput}
               value={profile.bio}
-              onChangeText={text => setProfile({...profile, bio: text})}
+              onChangeText={(text) => updateField('bio', text)}
               multiline
               numberOfLines={3}
               placeholder="Write something about yourself"
@@ -221,7 +161,7 @@ const ProfileScreen = () => {
             <TextInput
               style={styles.input}
               value={profile.phone_number}
-              onChangeText={text => setProfile({...profile, phone_number: text})}
+              onChangeText={(text) => updateField('phone_number', text)}
               placeholder="Enter phone number"
               placeholderTextColor="#666"
               keyboardType="phone-pad"
@@ -231,9 +171,7 @@ const ProfileScreen = () => {
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={profile.country}
-                onValueChange={value =>
-                  setProfile({...profile, country: value})
-                }
+                onValueChange={(value) => updateField('country', value)}
                 style={styles.picker}>
                 <Picker.Item label="Select Country" value="" />
                 {countries.map((country, index) => (
@@ -250,7 +188,7 @@ const ProfileScreen = () => {
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={profile.gender}
-                onValueChange={value => setProfile({...profile, gender: value})}
+                onValueChange={(value) => updateField('gender', value)}
                 style={styles.picker}>
                 <Picker.Item label="Select Gender" value="" />
                 <Picker.Item label="Male" value="male" />
@@ -261,12 +199,11 @@ const ProfileScreen = () => {
 
             {renderDateOfBirthField()}
 
-
             <TouchableOpacity
               style={styles.saveButton}
-              onPress={handleSubmit}
-              disabled={loading}>
-              {loading ? (
+              onPress={() => token && updateProfile(token)}
+              disabled={isLoading}>
+              {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.saveButtonText}>Save Changes</Text>
@@ -313,7 +250,5 @@ const ProfileScreen = () => {
     </ScrollView>
   );
 };
-
-
 
 export default ProfileScreen;

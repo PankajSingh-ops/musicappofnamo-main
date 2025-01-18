@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,12 @@ import {
   Modal,
   StyleSheet,
   Dimensions,
-  Alert,
-  Platform,
-  PermissionsAndroid,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {Track} from '../../type';
 import {useAuth} from '../../asyncStorage/AsyncStorage';
 import AddToPlaylistModal from '../PlaylistDetails/AddToPlaylist';
-import RNFetchBlob from 'rn-fetch-blob';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTrackOptionsStore } from '../../store/useTrackOptionStore';
 
 interface TrackOptionsMenuProps {
   visible: boolean;
@@ -29,212 +25,26 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
   track,
 }) => {
   const {user, token} = useAuth();
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-
-  const checkPermissions = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-          {
-            title: 'Storage Permission',
-            message: 'App needs access to storage to download songs',
-            buttonPositive: 'OK',
-          },
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.error('Permission error:', err);
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const handleDownload = async () => {
-    if (!user || !token) {
-      Alert.alert('Error', 'Please log in to download songs');
-      return;
-    }
-
-    // Check permissions first
-    const hasPermission = await checkPermissions();
-    if (!hasPermission) {
-      Alert.alert('Error', 'Storage permission is required to download songs');
-      return;
-    }
-
-    try {
-      // First, request download permission from backend
-      const response = await fetch(
-        `http://10.0.2.2:3000/api/downloads/${track.id}/download`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate download');
-      }
-
-      const data = await response.json();
-
-      // Get the app's private directory
-      const {dirs} = RNFetchBlob.fs;
-      const dirPath = Platform.select({
-        ios: dirs.DocumentDir,
-        android: dirs.DownloadDir,
-      });
-
-      // Create a sanitized filename
-      const filename = `${track.title.replace(/[^a-zA-Z0-9]/g, '_')}.mp3`;
-      const filePath = `${dirPath}/MyMusicApp/${filename}`;
-
-      // Ensure directory exists
-      await RNFetchBlob.fs.mkdir(`${dirPath}/MyMusicApp`);
-
-      // Start download
-      const downloadTask = RNFetchBlob.config({
-        path: filePath,
-        fileCache: true,
-        addAndroidDownloads: {
-          useDownloadManager: true,
-          notification: true,
-          title: `Downloading ${track.title}`,
-          description: 'Downloading song...',
-          mime: 'audio/mpeg',
-          mediaScannable: true,
-          path: filePath,
-        },
-      }).fetch('GET', data.downloadUrl, {
-        Authorization: `Bearer ${token}`,
-      });
-
-      downloadTask
-        .progress((received, total) => {
-          const progress = (received / total) * 100;
-          setDownloadProgress(progress);
-        })
-        .then(async res => {
-          // Save download info to AsyncStorage for offline access
-          try {
-            const downloads = await AsyncStorage.getItem('downloadedTracks');
-            const downloadedTracks = downloads ? JSON.parse(downloads) : [];
-
-            downloadedTracks.push({
-              id: track.id,
-              title: track.title,
-              artist: track.artist,
-              artwork: track.artwork,
-              filePath: res.path(),
-              downloadedAt: new Date().toISOString(),
-            });
-
-            await AsyncStorage.setItem(
-              'downloadedTracks',
-              JSON.stringify(downloadedTracks),
-            );
-
-            Alert.alert(
-              'Success',
-              'Song downloaded successfully! You can access it from the Downloads section.',
-            );
-          } catch (error) {
-            console.error('Error saving download info:', error);
-          }
-        })
-        .catch(error => {
-          console.error('Download failed:', error);
-          Alert.alert('Error', 'Failed to download the song');
-        })
-        .finally(() => {
-          setDownloadProgress(0);
-          onClose();
-        });
-    } catch (error) {
-      console.error('Download error:', error);
-      Alert.alert('Error', 'Failed to download the song');
-      onClose();
-    }
-  };
-
-  const checkFavoriteStatus = useCallback(async () => {
-    if (!user || !token) return;
-
-    try {
-      const response = await fetch(
-        `http://10.0.2.2:3000/api/favorites/check/${track.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to check favorite status');
-      }
-
-      const data = await response.json();
-      setIsFavorited(data.isFavorited);
-    } catch (error) {
-      console.error('Error checking favorite status:', error);
-      Alert.alert('Error', 'Failed to check favorite status');
-    }
-  }, [track.id, token, user]);
-
-  const handleLike = async () => {
-    if (!user || !token) {
-      Alert.alert('Error', 'Please log in to add favorites');
-      return;
-    }
-
-    try {
-      const method = isFavorited ? 'DELETE' : 'POST';
-      const url = isFavorited
-        ? `http://10.0.2.2:3000/api/favorites/${track.id}`
-        : 'http://10.0.2.2:3000/api/favorites';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body:
-          method === 'POST' ? JSON.stringify({musicId: track.id}) : undefined,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update favorite');
-      }
-
-      const data = await response.json();
-      setIsFavorited(!isFavorited);
-      Alert.alert('Success', data.message);
-      onClose();
-    } catch (error) {
-      console.error('Error updating favorite:', error);
-      Alert.alert('Error', 'Failed to update favorites');
-    }
-  };
+  const {
+    isFavorited,
+    downloadProgress,
+    showPlaylistModal,
+    setShowPlaylistModal,
+    checkFavoriteStatus,
+    handleLike,
+    handleDownload,
+  } = useTrackOptionsStore();
 
   const menuOptions = [
     {
       icon: isFavorited ? 'heart' : 'heart-outline',
       label: isFavorited ? 'Unlike' : 'Like',
-      onPress: handleLike,
+      onPress: () => handleLike(track, token),
     },
     {
       icon: 'add-circle-outline',
       label: 'Add to Playlist',
-      onPress: () => {
-        setShowPlaylistModal(true);
-      },
+      onPress: () => setShowPlaylistModal(true),
     },
     {
       icon: 'person-outline',
@@ -258,7 +68,7 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
         downloadProgress > 0
           ? `Downloading ${downloadProgress.toFixed(0)}%`
           : 'Download Song',
-      onPress: handleDownload,
+      onPress: () => handleDownload(track, token),
     },
     {
       icon: 'share-social-outline',
@@ -270,11 +80,11 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
     },
   ];
 
-  React.useEffect(() => {
-    if (visible && user) {
-      checkFavoriteStatus();
+  useEffect(() => {
+    if (visible && user && token) {
+      checkFavoriteStatus(track, token);
     }
-  }, [visible, user, checkFavoriteStatus]);
+  }, [visible, user, token, track]);
 
   return (
     <>
@@ -302,7 +112,12 @@ const TrackOptionsMenu: React.FC<TrackOptionsMenuProps> = ({
                   <Text style={styles.optionLabel}>{option.label}</Text>
                   {option.label.includes('Downloading') && (
                     <View style={styles.progressBar}>
-                      <View style={[styles.progress, { width: `${downloadProgress}%` }]} />
+                      <View
+                        style={[
+                          styles.progress,
+                          {width: `${downloadProgress}%`},
+                        ]}
+                      />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -364,6 +179,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     marginLeft: 15,
+    flex: 1,
   },
   progressBar: {
     height: 2,

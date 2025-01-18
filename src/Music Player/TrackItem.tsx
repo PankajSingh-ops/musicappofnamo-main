@@ -1,14 +1,17 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {View, Text, Image, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {Track} from '../../type';
 import TrackOptionsMenu from './TrackOptionsMenu';
 import styles from './Css/TrackItem';
+import { useTrackStore } from '../../store/useTrackStore';
+import { useTrackOptionsStore } from '../../store/useTrackOptionStore';
+
 
 interface TrackItemProps {
   item: Track;
   onPlay: (track: Track) => void;
-  isEditing: boolean;
+  isEditing?: boolean;
   onRemove: (id: string) => void;
   isSelected?: boolean;
 }
@@ -16,19 +19,29 @@ interface TrackItemProps {
 const TrackItem: React.FC<TrackItemProps> = ({
   item,
   onPlay,
-  isEditing,
   onRemove,
   isSelected = false,
 }) => {
-  const [isHovered, setIsHovered] = useState<boolean>(false);
-  const [showOptions, setShowOptions] = useState<boolean>(false);
+  const {
+    hoveredTrackId,
+    isEditMode,
+    setHoveredTrack,
+  } = useTrackStore();
+
+  const {
+    visibleTrackId,
+    setVisibleTrack,
+  } = useTrackOptionsStore();
+
+  const isHovered = hoveredTrackId === item.id;
+  const showOptions = visibleTrackId === item.id;
 
   return (
     <View>
       <TouchableOpacity
         style={[styles.trackContainer, isSelected && styles.selectedTrack]}
-        onPressIn={() => setIsHovered(true)}
-        onPressOut={() => setIsHovered(false)}
+        onPressIn={() => setHoveredTrack(item.id)}
+        onPressOut={() => setHoveredTrack(null)}
         onPress={() => onPlay(item)}>
         <View style={styles.imageContainer}>
           <Image source={{uri: item.artwork}} style={styles.trackImage} />
@@ -42,7 +55,7 @@ const TrackItem: React.FC<TrackItemProps> = ({
           <Text style={styles.trackTitle}>{item.title}</Text>
           <Text style={styles.trackArtist}>{item.artist}</Text>
         </View>
-        {isEditing ? (
+        {isEditMode ? (
           <TouchableOpacity
             style={styles.removeButton}
             onPress={() => onRemove(item.id)}>
@@ -51,7 +64,7 @@ const TrackItem: React.FC<TrackItemProps> = ({
         ) : (
           <TouchableOpacity
             style={styles.optionsButton}
-            onPress={() => setShowOptions(true)}>
+            onPress={() => setVisibleTrack(item.id)}>
             <Icon name="ellipsis-vertical" size={20} color="#fff" />
           </TouchableOpacity>
         )}
@@ -59,7 +72,7 @@ const TrackItem: React.FC<TrackItemProps> = ({
 
       <TrackOptionsMenu
         visible={showOptions}
-        onClose={() => setShowOptions(false)}
+        onClose={() => setVisibleTrack(null)}
         track={item}
       />
     </View>
