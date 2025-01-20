@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, {createContext, useState, useContext, useEffect} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { musicPlayerService } from '../src/Music Player/MuiscPlayerService';
 
 // Define the user type
 interface User {
@@ -27,7 +28,9 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 // Auth Provider Component
-export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,7 +74,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   // Logout method
   const logout = async () => {
     try {
-      // Remove user and token from AsyncStorage
+      await musicPlayerService.stop();
       await AsyncStorage.removeItem('user');
       await AsyncStorage.removeItem('token');
 
@@ -84,7 +87,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{user, token, login, logout, isLoading}}>
       {children}
     </AuthContext.Provider>
   );

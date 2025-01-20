@@ -1,20 +1,15 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import {View, StyleSheet} from 'react-native';
 import GlobalPlayer from './src/Music Player/GlobalPlayer';
-import { useMusicPlayer } from './src/Music Player/MusicContext';
+import {useMusicPlayer} from './src/Music Player/MusicContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
-  const { 
-    currentTrack, 
-    isPlaying, 
-    togglePlayback, 
-    skipToNext, 
-    skipToPrevious 
-  } = useMusicPlayer();
+const AppLayout: React.FC<AppLayoutProps> = ({children}) => {
+  const {currentTrack, isPlaying, togglePlayback, skipToNext, skipToPrevious} =
+    useMusicPlayer();
 
   const handleToggleFavorite = () => {
     // Implement favorite toggling logic
@@ -23,9 +18,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
-        {children}
-      </View>
+      <View style={styles.content}>{children}</View>
       {currentTrack && (
         <GlobalPlayer
           currentTrack={currentTrack}
@@ -34,7 +27,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           onNext={skipToNext}
           onPrevious={skipToPrevious}
           onToggleFavorite={handleToggleFavorite}
-          onClose={() => {/* Implement close logic */}}
+          onClose={() => {
+            /* Implement close logic */
+          }}
         />
       )}
     </View>

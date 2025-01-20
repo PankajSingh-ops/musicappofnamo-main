@@ -112,7 +112,7 @@ const SignInScreen= ({route, navigation}:any) => {
   };
 
   const handleSupport = () => {
-    Alert.alert('Support', 'Support functionality will be implemented soon.');
+    navigation.navigate('SupportForm')
   };
 
   return (
@@ -192,7 +192,7 @@ padding:2,
   },
   linkHeading:{
 fontSize:18,
-color:'blue',
+color:'rgba(182, 45, 37, 1)',
   },
   input: {
     backgroundColor: '#333',

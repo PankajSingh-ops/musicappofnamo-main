@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Register: undefined;
   SignIn: undefined;
+  SupportForm:undefined;
   ForgetPassword: undefined;
   VerifyOTP: {email?: string};
   ResetPassword: {email?: string};
@@ -29,6 +30,7 @@ export type RootStackParamList = {
   AlbumDetail: {album: Album};
   Search:undefined;
   AddEventsScreen:undefined;
+  EventsDetails:undefined;
 };
 
 export type SplashScreenNavigationProp = NativeStackNavigationProp<

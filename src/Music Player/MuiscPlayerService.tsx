@@ -20,6 +20,7 @@ interface IMusicPlayerService {
   seekTo(position: number): Promise<void>;
   getDuration(): Promise<number>;
   getPosition(): Promise<number>;
+  stop(): Promise<void>;
 }
 
 class MusicPlayerService implements IMusicPlayerService {
@@ -93,7 +94,7 @@ class MusicPlayerService implements IMusicPlayerService {
     TrackPlayer.addEventListener(Event.RemotePrevious, () =>
       this.skipToPrevious(),
     );
-    TrackPlayer.addEventListener(Event.RemoteStop, () => TrackPlayer.destroy());
+    TrackPlayer.addEventListener(Event.RemoteStop, () => TrackPlayer.reset());
     TrackPlayer.addEventListener(Event.RemoteSeek, data =>
       TrackPlayer.seekTo(data.position),
     );
@@ -268,6 +269,29 @@ class MusicPlayerService implements IMusicPlayerService {
       }
     } catch (error) {
       console.error('Error skipping to next track:', error);
+      throw error;
+    }
+  }
+
+  async stop(): Promise<void> {
+    try {
+      if (!this.isInitialized) {
+        return;
+      }
+
+      // First pause any playing audio
+      const state = await TrackPlayer.getState();
+      if (state === State.Playing) {
+        await TrackPlayer.pause();
+      }
+
+      // Reset the player (clears the queue and current track)
+      await TrackPlayer.reset();
+
+      // Clear the current playlist
+      this.currentPlaylist = [];
+    } catch (error) {
+      console.error('Error stopping playback:', error);
       throw error;
     }
   }

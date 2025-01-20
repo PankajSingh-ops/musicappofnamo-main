@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
-  StyleSheet,
   FlatList,
   ActivityIndicator,
   TextInput,
   Alert,
-  Dimensions,
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useAuth } from '../../asyncStorage/AsyncStorage';
+import {useAuth} from '../../asyncStorage/AsyncStorage';
+import styles from './css/AddToPlaylist';
+import usePlaylistStore from '../../store/usePlayList';
 
 interface AddToPlaylistModalProps {
   visible: boolean;
   onClose: () => void;
-  trackId: number|string;
+  trackId: number | string;
 }
 
 interface Playlist {
@@ -33,36 +33,24 @@ const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
   onClose,
   trackId,
 }) => {
-  const { token } = useAuth();
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {token} = useAuth();
+  const {
+    playlists,
+    loading,
+    creating,
+    fetchPlaylists,
+    createPlaylist,
+    addTrackToPlaylist,
+  } = usePlaylistStore();
+
   const [showCreateNew, setShowCreateNew] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (visible) {
-      fetchPlaylists();
+      fetchPlaylists(token);
     }
-  }, [visible]);
-
-  const fetchPlaylists = async () => {
-    try {
-      const response = await fetch('http://10.0.2.2:3000/api/playlists', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error('Failed to fetch playlists');
-      const data = await response.json();
-      setPlaylists(data);
-    } catch (error) {
-      console.error('Error fetching playlists:', error);
-      Alert.alert('Error', 'Failed to load playlists');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [visible, token, fetchPlaylists]);
 
   const handleCreatePlaylist = async () => {
     if (!newPlaylistName.trim()) {
@@ -70,49 +58,21 @@ const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
       return;
     }
 
-    setCreating(true);
     try {
-      const response = await fetch('http://10.0.2.2:3000/api/playlists', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: newPlaylistName,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to create playlist');
-      
-      const newPlaylist = await response.json();
-      setPlaylists([newPlaylist, ...playlists]);
+      await createPlaylist(token, newPlaylistName, trackId);
       setShowCreateNew(false);
       setNewPlaylistName('');
-      
-      // Add track to the newly created playlist
-      await addTrackToPlaylist(newPlaylist.id);
+      Alert.alert('Success', 'Playlist created and track added');
+      onClose();
     } catch (error) {
       console.error('Error creating playlist:', error);
       Alert.alert('Error', 'Failed to create playlist');
-    } finally {
-      setCreating(false);
     }
   };
 
-  const addTrackToPlaylist = async (playlistId: number) => {
+  const handleAddToPlaylist = async (playlistId: number) => {
     try {
-      const response = await fetch(`http://10.0.2.2:3000/api/playlists/${playlistId}/songs`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ songId: trackId }),
-      });
-
-      if (!response.ok) throw new Error('Failed to add track to playlist');
-      
+      await addTrackToPlaylist(token, playlistId, trackId);
       Alert.alert('Success', 'Track added to playlist');
       onClose();
     } catch (error) {
@@ -121,13 +81,13 @@ const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
     }
   };
 
-  const renderPlaylist = ({ item }: { item: Playlist }) => (
+  const renderPlaylist = ({item}: {item: Playlist}) => (
     <TouchableOpacity
       style={styles.playlistItem}
-      onPress={() => addTrackToPlaylist(item.id)}>
+      onPress={() => handleAddToPlaylist(item.id)}>
       <View style={styles.playlistInfo}>
         {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.playlistImage} />
+          <Image source={{uri: item.imageUrl}} style={styles.playlistImage} />
         ) : (
           <View style={[styles.playlistImage, styles.placeholderImage]}>
             <Icon name="musical-notes" size={24} color="#666" />
@@ -199,7 +159,7 @@ const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
             <FlatList
               data={playlists}
               renderItem={renderPlaylist}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={item => item.id.toString()}
               contentContainerStyle={styles.listContainer}
             />
           )}
@@ -208,121 +168,5 @@ const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  container: {
-    backgroundColor: '#282828',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: Dimensions.get('window').height * 0.7,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#404040',
-  },
-  title: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    padding: 5,
-  },
-  createNewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#404040',
-  },
-  createNewText: {
-    color: '#ff0000',
-    fontSize: 16,
-    marginLeft: 15,
-    fontWeight: '600',
-  },
-  playlistItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    justifyContent: 'space-between',
-  },
-  playlistInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  playlistImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 4,
-  },
-  placeholderImage: {
-    backgroundColor: '#404040',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playlistDetails: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  playlistName: {
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  songCount: {
-    color: '#b3b3b3',
-    fontSize: 14,
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  loader: {
-    padding: 20,
-  },
-  createNewSection: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#404040',
-  },
-  input: {
-    backgroundColor: '#404040',
-    color: '#fff',
-    padding: 12,
-    borderRadius: 4,
-    marginBottom: 15,
-  },
-  createButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  button: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    marginLeft: 10,
-  },
-  cancelButton: {
-    backgroundColor: '#404040',
-  },
-  createButton: {
-    backgroundColor: '#ff0000',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
 
 export default AddToPlaylistModal;
